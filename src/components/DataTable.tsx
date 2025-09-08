@@ -24,7 +24,10 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
     return new Date(dateString).toLocaleDateString("id-ID");
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return "Rp 0";
+    }
     return `Rp ${amount.toLocaleString("id-ID")}`;
   };
 

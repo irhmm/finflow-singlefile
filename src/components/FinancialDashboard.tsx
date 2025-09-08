@@ -143,9 +143,11 @@ export const FinancialDashboard = () => {
   const calculateTotal = () => {
     return data.reduce((total, record) => {
       if (activeTable === "worker_income") {
-        return total + ((record as WorkerIncome).fee || 0);
+        const fee = (record as WorkerIncome).fee;
+        return total + (fee && !isNaN(fee) ? fee : 0);
       }
-      return total + ((record as AdminIncome | Expense).nominal || 0);
+      const nominal = (record as AdminIncome | Expense).nominal;
+      return total + (nominal && !isNaN(nominal) ? nominal : 0);
     }, 0);
   };
 
