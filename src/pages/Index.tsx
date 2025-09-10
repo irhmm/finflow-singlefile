@@ -1,18 +1,16 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancialDashboard } from "@/components/FinancialDashboard";
+import { PublicFinancialView } from "@/components/PublicFinancialView";
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login');
-    }
-  }, [user, loading, navigate]);
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
 
   if (loading) {
     return (
@@ -22,10 +20,12 @@ const Index = () => {
     );
   }
 
+  // Show public view for non-authenticated users
   if (!user) {
-    return null;
+    return <PublicFinancialView onLoginClick={handleLoginClick} />;
   }
 
+  // Show admin dashboard for authenticated users
   return <FinancialDashboard />;
 };
 
