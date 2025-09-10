@@ -5,10 +5,12 @@ import { AppSidebar } from "./AppSidebar";
 import { DataTable } from "./DataTable";
 import { DataModal } from "./DataModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { MonthlyRecap } from "./MonthlyRecap";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, BarChart3 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type TableType = "admin_income" | "worker_income" | "expenses";
 
@@ -42,6 +44,7 @@ const tableLabels = {
 };
 
 export const FinancialDashboard = () => {
+  const [activeTab, setActiveTab] = useState("data");
   const [activeTable, setActiveTable] = useState<TableType>("admin_income");
   const [data, setData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,31 +166,53 @@ export const FinancialDashboard = () => {
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
-              <h1 className="text-3xl font-bold">{tableLabels[activeTable]}</h1>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
+                Sistem Keuangan
+              </h1>
             </div>
-            
-            <Button onClick={handleCreate} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Tambah Data
-            </Button>
           </div>
 
-          <div className="mb-6">
-            <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-2">Total</h3>
-              <p className="text-2xl font-bold text-primary">
-                Rp {calculateTotal().toLocaleString("id-ID")}
-              </p>
-            </Card>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="data" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Kelola Data
+              </TabsTrigger>
+              <TabsTrigger value="recap" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Rekap Bulanan
+              </TabsTrigger>
+            </TabsList>
 
-          <DataTable
-            data={data}
-            tableType={activeTable}
-            loading={loading}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+            <TabsContent value="data" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">{tableLabels[activeTable]}</h2>
+                <Button onClick={handleCreate} className="gap-2 bg-gradient-to-r from-secondary to-accent hover:from-secondary/90 hover:to-accent/90">
+                  <Plus className="h-4 w-4" />
+                  Tambah Data
+                </Button>
+              </div>
+
+              <Card className="p-4 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-card">
+                <h3 className="text-lg font-semibold mb-2 text-secondary">Total {tableLabels[activeTable]}</h3>
+                <p className="text-3xl font-bold text-secondary">
+                  Rp {calculateTotal().toLocaleString("id-ID")}
+                </p>
+              </Card>
+
+              <DataTable
+                data={data}
+                tableType={activeTable}
+                loading={loading}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </TabsContent>
+
+            <TabsContent value="recap" className="space-y-6">
+              <MonthlyRecap />
+            </TabsContent>
+          </Tabs>
 
           <DataModal
             isOpen={isModalOpen}
