@@ -5,7 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { DataTable } from "./DataTable";
 import { DataModal } from "./DataModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
-import { UserManagement } from "./UserManagement";
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -367,12 +367,6 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           isReadOnly={!canEdit}
         />
 
-        {/* User Management Section - Only for Super Admin */}
-        {isSuperAdmin && (
-          <div className="mt-8">
-            <UserManagement />
-          </div>
-        )}
           </div>
 
           {canEdit && (
