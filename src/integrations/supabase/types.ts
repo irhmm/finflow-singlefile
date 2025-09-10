@@ -16,19 +16,16 @@ export type Database = {
     Tables: {
       admin_income: {
         Row: {
-          code: string | null
           id: number
           nominal: number
           tanggal: string
         }
         Insert: {
-          code?: string | null
           id?: number
           nominal: number
           tanggal: string
         }
         Update: {
-          code?: string | null
           id?: number
           nominal?: number
           tanggal?: string
@@ -38,45 +35,18 @@ export type Database = {
       expenses: {
         Row: {
           id: number
-          keterangan: string | null
           nominal: number
           tanggal: string
         }
         Insert: {
           id?: number
-          keterangan?: string | null
           nominal: number
           tanggal: string
         }
         Update: {
           id?: number
-          keterangan?: string | null
           nominal?: number
           tanggal?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          id: string
-          role: string
-          updated_at: string
-          username: string | null
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          role?: string
-          updated_at?: string
-          username?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: string
-          updated_at?: string
-          username?: string | null
         }
         Relationships: []
       }
@@ -112,10 +82,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

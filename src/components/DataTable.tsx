@@ -15,8 +15,8 @@ interface DataTableProps {
   data: DataRecord[];
   tableType: TableType;
   loading: boolean;
-  onEdit?: (record: DataRecord) => void;
-  onDelete?: (record: DataRecord) => void;
+  onEdit: (record: DataRecord) => void;
+  onDelete: (record: DataRecord) => void;
 }
 
 export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTableProps) {
@@ -52,8 +52,6 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
   }
 
   const renderTableHeaders = () => {
-    const hasActions = onEdit || onDelete;
-    
     switch (tableType) {
       case "admin_income":
         return (
@@ -61,7 +59,7 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
             <TableHead>Tanggal</TableHead>
             <TableHead>Code</TableHead>
             <TableHead>Nominal</TableHead>
-            {hasActions && <TableHead className="w-[100px]">Aksi</TableHead>}
+            <TableHead className="w-[100px]">Aksi</TableHead>
           </>
         );
       case "worker_income":
@@ -72,7 +70,7 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
             <TableHead>Jobdesk</TableHead>
             <TableHead>Worker</TableHead>
             <TableHead>Fee</TableHead>
-            {hasActions && <TableHead className="w-[100px]">Aksi</TableHead>}
+            <TableHead className="w-[100px]">Aksi</TableHead>
           </>
         );
       case "expenses":
@@ -81,38 +79,33 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
             <TableHead>Tanggal</TableHead>
             <TableHead>Keterangan</TableHead>
             <TableHead>Nominal</TableHead>
-            {hasActions && <TableHead className="w-[100px]">Aksi</TableHead>}
+            <TableHead className="w-[100px]">Aksi</TableHead>
           </>
         );
     }
   };
 
   const renderTableRow = (record: DataRecord) => {
-    const hasActions = onEdit || onDelete;
-    const commonActions = hasActions ? (
+    const commonActions = (
       <TableCell>
         <div className="flex gap-2">
-          {onEdit && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(record)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDelete(record)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(record)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDelete(record)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </TableCell>
-    ) : null;
+    );
 
     switch (tableType) {
       case "admin_income":
