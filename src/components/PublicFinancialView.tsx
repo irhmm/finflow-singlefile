@@ -26,7 +26,7 @@ export const PublicFinancialView = ({ onLoginClick }: PublicFinancialViewProps) 
   const [loading, setLoading] = useState(true);
   const [searchFilters, setSearchFilters] = useState<SearchFiltersType>({});
 
-  // Load data for active table
+  // Load data for active table - public access with error handling
   const loadData = async () => {
     setLoading(true);
     try {
@@ -35,16 +35,21 @@ export const PublicFinancialView = ({ onLoginClick }: PublicFinancialViewProps) 
         .select("*")
         .order("tanggal", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        // Set empty data for public view instead of showing errors
+        setAllData([]);
+        applyFilters([], searchFilters);
+        return;
+      }
+      
       setAllData(result || []);
       applyFilters(result || [], searchFilters);
     } catch (error) {
       console.error("Error loading data:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data",
-        variant: "destructive"
-      });
+      // Gracefully handle errors in public view
+      setAllData([]);
+      setData([]);
     } finally {
       setLoading(false);
     }
