@@ -1,5 +1,7 @@
-import { CreditCard, Users, TrendingDown, BarChart3, Menu } from "lucide-react";
+import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -49,6 +51,16 @@ const navigationItems = [
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Logout berhasil!');
+    } catch (error) {
+      toast.error('Gagal logout');
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-secondary/20">
@@ -88,12 +100,26 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                       </button>
                     )}
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+    
+    <SidebarGroup>
+      <SidebarGroupLabel>Akun</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleSignOut}>
+              <LogOut />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  </SidebarContent>
+</Sidebar>
   );
 }

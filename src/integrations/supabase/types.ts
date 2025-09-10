@@ -56,6 +56,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          role?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       worker_income: {
         Row: {
           code: string
