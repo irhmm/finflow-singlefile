@@ -57,6 +57,7 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
         return (
           <>
             <TableHead>Tanggal</TableHead>
+            <TableHead>Code</TableHead>
             <TableHead>Nominal</TableHead>
             <TableHead className="w-[100px]">Aksi</TableHead>
           </>
@@ -76,6 +77,7 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
         return (
           <>
             <TableHead>Tanggal</TableHead>
+            <TableHead>Keterangan</TableHead>
             <TableHead>Nominal</TableHead>
             <TableHead className="w-[100px]">Aksi</TableHead>
           </>
@@ -111,6 +113,7 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
         return (
           <TableRow key={adminRecord.id}>
             <TableCell>{formatDate(adminRecord.tanggal)}</TableCell>
+            <TableCell>{adminRecord.code || "-"}</TableCell>
             <TableCell>{formatCurrency(adminRecord.nominal)}</TableCell>
             {commonActions}
           </TableRow>
@@ -134,6 +137,7 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
         return (
           <TableRow key={expenseRecord.id}>
             <TableCell>{formatDate(expenseRecord.tanggal)}</TableCell>
+            <TableCell>{expenseRecord.keterangan || "-"}</TableCell>
             <TableCell>{formatCurrency(expenseRecord.nominal)}</TableCell>
             {commonActions}
           </TableRow>

@@ -46,25 +46,23 @@ export const MonthlyRecap = () => {
         throw new Error("Error loading data");
       }
 
-      // Group data by month
+      // Group data by month - only create entries for months with data
       const monthlyMap = new Map<string, MonthlyData>();
-      
-      // Initialize all months
-      for (let month = 1; month <= 12; month++) {
-        const monthKey = `${selectedYear}-${month.toString().padStart(2, '0')}`;
-        monthlyMap.set(monthKey, {
-          month: new Date(selectedYear, month - 1).toLocaleString('id-ID', { month: 'long' }),
-          year: selectedYear,
-          admin_income: 0,
-          worker_income: 0,
-          expenses: 0,
-          net_income: 0
-        });
-      }
 
       // Process admin income
       adminResult.data?.forEach(item => {
         const monthKey = item.tanggal.substring(0, 7);
+        if (!monthlyMap.has(monthKey)) {
+          const monthNum = parseInt(monthKey.split('-')[1]);
+          monthlyMap.set(monthKey, {
+            month: new Date(selectedYear, monthNum - 1).toLocaleString('id-ID', { month: 'long' }),
+            year: selectedYear,
+            admin_income: 0,
+            worker_income: 0,
+            expenses: 0,
+            net_income: 0
+          });
+        }
         const existing = monthlyMap.get(monthKey);
         if (existing) {
           existing.admin_income += Number(item.nominal);
@@ -74,6 +72,17 @@ export const MonthlyRecap = () => {
       // Process worker income
       workerResult.data?.forEach(item => {
         const monthKey = item.tanggal.substring(0, 7);
+        if (!monthlyMap.has(monthKey)) {
+          const monthNum = parseInt(monthKey.split('-')[1]);
+          monthlyMap.set(monthKey, {
+            month: new Date(selectedYear, monthNum - 1).toLocaleString('id-ID', { month: 'long' }),
+            year: selectedYear,
+            admin_income: 0,
+            worker_income: 0,
+            expenses: 0,
+            net_income: 0
+          });
+        }
         const existing = monthlyMap.get(monthKey);
         if (existing) {
           existing.worker_income += Number(item.fee);
@@ -83,17 +92,35 @@ export const MonthlyRecap = () => {
       // Process expenses
       expensesResult.data?.forEach(item => {
         const monthKey = item.tanggal.substring(0, 7);
+        if (!monthlyMap.has(monthKey)) {
+          const monthNum = parseInt(monthKey.split('-')[1]);
+          monthlyMap.set(monthKey, {
+            month: new Date(selectedYear, monthNum - 1).toLocaleString('id-ID', { month: 'long' }),
+            year: selectedYear,
+            admin_income: 0,
+            worker_income: 0,
+            expenses: 0,
+            net_income: 0
+          });
+        }
         const existing = monthlyMap.get(monthKey);
         if (existing) {
           existing.expenses += Number(item.nominal);
         }
       });
 
-      // Calculate net income and set data
-      const data = Array.from(monthlyMap.values()).map(item => ({
-        ...item,
-        net_income: item.admin_income + item.worker_income - item.expenses
-      }));
+      // Calculate net income and sort by month
+      const data = Array.from(monthlyMap.values())
+        .map(item => ({
+          ...item,
+          net_income: item.admin_income + item.worker_income - item.expenses
+        }))
+        .sort((a, b) => {
+          const aMonth = monthlyMap.get(`${a.year}-${new Date(Date.parse(a.month + " 1, 2000")).getMonth() + 1}`.padStart(2, '0'));
+          const bMonth = monthlyMap.get(`${b.year}-${new Date(Date.parse(b.month + " 1, 2000")).getMonth() + 1}`.padStart(2, '0'));
+          return new Date(a.year, new Date(Date.parse(a.month + " 1, 2000")).getMonth()).getTime() - 
+                 new Date(b.year, new Date(Date.parse(b.month + " 1, 2000")).getMonth()).getTime();
+        });
 
       setMonthlyData(data);
     } catch (error) {

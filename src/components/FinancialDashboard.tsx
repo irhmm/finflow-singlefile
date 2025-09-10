@@ -18,6 +18,7 @@ export interface AdminIncome {
   id: number;
   tanggal: string;
   nominal: number;
+  code?: string;
 }
 
 export interface WorkerIncome {
@@ -33,6 +34,7 @@ export interface Expense {
   id: number;
   tanggal: string;
   nominal: number;
+  keterangan?: string;
 }
 
 export type DataRecord = AdminIncome | WorkerIncome | Expense;

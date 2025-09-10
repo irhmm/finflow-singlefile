@@ -40,7 +40,7 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
       
       switch (tableType) {
         case "admin_income":
-          setFormData({ tanggal: today, nominal: "" });
+          setFormData({ tanggal: today, code: "", nominal: "" });
           break;
         case "worker_income":
           setFormData({ 
@@ -52,7 +52,7 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
           });
           break;
         case "expenses":
-          setFormData({ tanggal: today, nominal: "" });
+          setFormData({ tanggal: today, keterangan: "", nominal: "" });
           break;
       }
     }
@@ -137,6 +137,19 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
                   onChange={(e) => handleInputChange("tanggal", e.target.value)}
                   className="col-span-3"
                   required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="code" className="text-right">
+                  Code
+                </Label>
+                <Input
+                  id="code"
+                  type="text"
+                  placeholder="Kode (opsional)"
+                  value={formData.code || ""}
+                  onChange={(e) => handleInputChange("code", e.target.value)}
+                  className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -249,6 +262,19 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
                   onChange={(e) => handleInputChange("tanggal", e.target.value)}
                   className="col-span-3"
                   required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="keterangan" className="text-right">
+                  Keterangan
+                </Label>
+                <Input
+                  id="keterangan"
+                  type="text"
+                  placeholder="Keterangan (opsional)"
+                  value={formData.keterangan || ""}
+                  onChange={(e) => handleInputChange("keterangan", e.target.value)}
+                  className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
