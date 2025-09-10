@@ -1,5 +1,4 @@
-import { CreditCard, Users, TrendingDown, FileText, Home } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { CreditCard, Users, TrendingDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,24 +13,11 @@ import {
 import { TableType } from "./FinancialDashboard";
 
 interface AppSidebarProps {
-  activeTable?: TableType;
-  onTableChange?: (table: TableType) => void;
+  activeTable: TableType;
+  onTableChange: (table: TableType) => void;
 }
 
-const pageNavigation = [
-  {
-    title: "Dashboard",
-    icon: Home,
-    url: "/"
-  },
-  {
-    title: "Laporan Keuangan",
-    icon: FileText,
-    url: "/laporan-keuangan"
-  }
-];
-
-const tableNavigation = [
+const navigationItems = [
   {
     title: "Pendapatan Admin",
     icon: CreditCard,
@@ -51,67 +37,34 @@ const tableNavigation = [
 
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
-  const location = useLocation();
-  const currentPath = location.pathname;
-
-  const isActive = (path: string) => currentPath === path;
-  const isTableActive = (table: TableType) => activeTable === table && currentPath === "/";
 
   return (
-    <Sidebar collapsible="icon" className="border-r-2 border-secondary/20">
-      <SidebarContent className="bg-gradient-to-b from-sidebar to-secondary/5">
-        {/* Page Navigation */}
+    <Sidebar collapsible="icon">
+      <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-header-primary font-semibold">
-            Navigasi
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>Sistem Keuangan</SidebarGroupLabel>
+          
           <SidebarGroupContent>
             <SidebarMenu>
-              {pageNavigation.map((item) => (
-                <SidebarMenuItem key={item.url}>
+              {navigationItems.map((item) => (
+                <SidebarMenuItem key={item.table}>
                   <SidebarMenuButton
                     asChild
-                    isActive={isActive(item.url)}
-                    className="hover:bg-secondary/20 data-[active=true]:bg-secondary data-[active=true]:text-secondary-foreground"
+                    isActive={activeTable === item.table}
                   >
-                    <NavLink 
-                      to={item.url}
-                      className="flex items-center gap-3 w-full transition-colors duration-200"
+                    <button
+                      onClick={() => onTableChange(item.table)}
+                      className="flex items-center gap-2 w-full"
                     >
-                      <item.icon className="h-5 w-5" />
-                      <span className="font-medium">{item.title}</span>
-                    </NavLink>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Table Navigation - only show on dashboard */}
-        {currentPath === "/" && onTableChange && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-header-primary font-semibold">
-              Kelola Data
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {tableNavigation.map((item) => (
-                  <SidebarMenuItem key={item.table}>
-                    <SidebarMenuButton
-                      isActive={isTableActive(item.table)}
-                      className="hover:bg-secondary/20 data-[active=true]:bg-secondary data-[active=true]:text-secondary-foreground"
-                      onClick={() => onTableChange(item.table)}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span className="font-medium">{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
     </Sidebar>
   );

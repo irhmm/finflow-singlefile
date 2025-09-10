@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, BarChart3, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type TableType = "admin_income" | "worker_income" | "expenses";
 
@@ -47,6 +47,7 @@ const tableLabels = {
 };
 
 export const FinancialDashboard = () => {
+  const [activeTab, setActiveTab] = useState("data");
   const [activeTable, setActiveTable] = useState<TableType>("admin_income");
   const [data, setData] = useState<DataRecord[]>([]);
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
@@ -205,81 +206,105 @@ export const FinancialDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="hover:bg-secondary/20" />
-          <h1 className="text-4xl font-bold text-header-primary">
-            Sistem Keuangan
-          </h1>
-        </div>
-      </div>
-
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-header-primary">{tableLabels[activeTable]}</h2>
-          <Button onClick={handleCreate} className="gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <Plus className="h-4 w-4" />
-            Tambah Data
-          </Button>
-        </div>
-
-        {/* Search Bar */}
-        <Card className="p-6 bg-gradient-to-r from-card to-secondary/5 border-secondary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-            <Input
-              placeholder={`Cari data ${tableLabels[activeTable].toLowerCase()}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 py-3 text-lg bg-background/80 border-secondary/30 focus:border-secondary focus:ring-secondary/20 transition-all duration-300 rounded-lg"
-            />
-          </div>
-          {searchQuery && (
-            <div className="mt-3 text-sm text-muted-foreground flex items-center gap-2">
-              <div className="h-2 w-2 bg-secondary rounded-full animate-pulse"></div>
-              Menampilkan {filteredData.length} dari {data.length} data
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/10 border-secondary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-          <h3 className="text-xl font-semibold mb-3 text-header-primary">
-            Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
-          </h3>
-          <p className="text-4xl font-bold text-header-primary mb-2">
-            Rp {calculateTotal().toLocaleString("id-ID")}
-          </p>
-          {searchQuery && (
-            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
-              <div className="h-2 w-2 bg-secondary rounded-full"></div>
-              dari {data.length} total data
-            </p>
-          )}
-        </Card>
-
-        <DataTable
-          data={filteredData}
-          tableType={activeTable}
-          loading={loading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar 
+          activeTable={activeTable} 
+          onTableChange={setActiveTable} 
         />
+        
+        <main className="flex-1 p-6">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
+                Sistem Keuangan
+              </h1>
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="data" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Kelola Data
+              </TabsTrigger>
+              <TabsTrigger value="recap" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Rekap Bulanan
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="data" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">{tableLabels[activeTable]}</h2>
+                <Button onClick={handleCreate} className="gap-2 bg-gradient-to-r from-secondary to-accent hover:from-secondary/90 hover:to-accent/90">
+                  <Plus className="h-4 w-4" />
+                  Tambah Data
+                </Button>
+              </div>
+
+              {/* Search Bar */}
+              <Card className="p-4 bg-gradient-to-r from-card to-secondary/10 border-secondary/20 shadow-card">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder={`Cari data ${tableLabels[activeTable].toLowerCase()}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-background/80 border-secondary/30 focus:border-secondary focus:ring-secondary/20 transition-all duration-300"
+                  />
+                </div>
+                {searchQuery && (
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Menampilkan {filteredData.length} dari {data.length} data
+                  </div>
+                )}
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-card">
+                <h3 className="text-lg font-semibold mb-2 text-secondary">
+                  Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
+                </h3>
+                <p className="text-3xl font-bold text-secondary">
+                  Rp {calculateTotal().toLocaleString("id-ID")}
+                </p>
+                {searchQuery && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    dari {data.length} total data
+                  </p>
+                )}
+              </Card>
+
+              <DataTable
+                data={filteredData}
+                tableType={activeTable}
+                loading={loading}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </TabsContent>
+
+            <TabsContent value="recap" className="space-y-6">
+              <MonthlyRecap />
+            </TabsContent>
+          </Tabs>
+
+          <DataModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            tableType={activeTable}
+            editingRecord={editingRecord}
+          />
+
+          <DeleteConfirmModal
+            isOpen={isDeleteModalOpen}
+            onClose={() => setIsDeleteModalOpen(false)}
+            onConfirm={confirmDelete}
+            recordType={tableLabels[activeTable]}
+          />
+        </main>
       </div>
-
-      <DataModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        tableType={activeTable}
-        editingRecord={editingRecord}
-      />
-
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={confirmDelete}
-        recordType={tableLabels[activeTable]}
-      />
-    </div>
+    </SidebarProvider>
   );
 };

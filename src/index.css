@@ -20,18 +20,14 @@ All colors MUST be HSL.
     --primary: 0 0% 100%;
     --primary-foreground: 222.2 84% 4.9%;
 
-    --secondary: 218 100% 67%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 200 100% 85%;
+    --secondary-foreground: 222.2 84% 4.9%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 218 100% 72%;
-    --accent-foreground: 0 0% 100%;
-    
-    /* Header colors */
-    --header-primary: 0 0% 0%;
-    --header-secondary: 222.2 84% 4.9%;
+    --accent: 200 100% 90%;
+    --accent-foreground: 222.2 84% 4.9%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -77,18 +73,14 @@ All colors MUST be HSL.
     --primary: 0 0% 100%;
     --primary-foreground: 222.2 84% 4.9%;
 
-    --secondary: 218 100% 67%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 200 50% 30%;
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 218 100% 72%;
-    --accent-foreground: 0 0% 100%;
-    
-    /* Header colors for dark mode */
-    --header-primary: 0 0% 100%;
-    --header-secondary: 210 40% 98%;
+    --accent: 200 50% 35%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;

@@ -1,18 +1,7 @@
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { FinancialDashboard } from "@/components/FinancialDashboard";
 
 const Index = () => {
-  return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-gradient-to-br from-background via-background to-secondary/5">
-        <AppSidebar />
-        <main className="flex-1">
-          <FinancialDashboard />
-        </main>
-      </div>
-    </SidebarProvider>
-  );
+  return <FinancialDashboard />;
 };
 
 export default Index;
