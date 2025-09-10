@@ -3,7 +3,7 @@ import { FinancialDashboard } from "@/components/FinancialDashboard";
 import { TableType } from "@/components/FinancialDashboard";
 
 const Index = () => {
-  const [activeTable, setActiveTable] = useState<TableType>("admin_income");
+  const [activeTable, setActiveTable] = useState<TableType>("worker_income");
 
   useEffect(() => {
     // Get table from URL parameter

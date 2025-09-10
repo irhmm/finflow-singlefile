@@ -22,42 +22,47 @@ interface AppSidebarProps {
 
 const navigationItems = [
   {
-    title: "Pendapatan Admin",
-    icon: CreditCard,
-    table: "admin_income" as TableType,
-    isRoute: false
-  },
-  {
     title: "Pendapatan Worker", 
     icon: Users,
     table: "worker_income" as TableType,
-    isRoute: false
+    isRoute: false,
+    publicAccess: true
+  },
+  {
+    title: "Pendapatan Admin",
+    icon: CreditCard,
+    table: "admin_income" as TableType,
+    isRoute: false,
+    publicAccess: false
   },
   {
     title: "Pengeluaran",
     icon: TrendingDown,
     table: "expenses" as TableType,
-    isRoute: false
+    isRoute: false,
+    publicAccess: false
   },
   {
     title: "Data Worker",
     icon: UserCheck,
     table: "workers" as TableType,
-    isRoute: false
+    isRoute: false,
+    publicAccess: false
   },
   {
     title: "Laporan Keuangan",
     icon: BarChart3,
     table: "laporan" as any,
     path: "/laporan-keuangan",
-    isRoute: true
+    isRoute: true,
+    publicAccess: false
   }
 ];
 
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user, isAdmin } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -67,6 +72,11 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
       toast.error('Gagal logout');
     }
   };
+
+  // Filter navigation items based on user role
+  const filteredItems = navigationItems.filter(item => 
+    item.publicAccess || isAdmin
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-secondary/20">
@@ -78,7 +88,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
           
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
+              {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.table}>
                   <SidebarMenuButton
                     asChild
@@ -112,19 +122,21 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
       </SidebarGroupContent>
     </SidebarGroup>
     
-    <SidebarGroup>
-      <SidebarGroupLabel>Akun</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut}>
-              <LogOut />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    {user && (
+      <SidebarGroup>
+        <SidebarGroupLabel>Akun</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleSignOut}>
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    )}
   </SidebarContent>
 </Sidebar>
   );

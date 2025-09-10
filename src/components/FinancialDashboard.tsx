@@ -8,8 +8,9 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, LogIn, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export type TableType = "admin_income" | "worker_income" | "expenses" | "workers";
 
@@ -60,17 +61,30 @@ interface FinancialDashboardProps {
   initialTable?: TableType;
 }
 
-export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialDashboardProps) => {
+export const FinancialDashboard = ({ initialTable = "worker_income" }: FinancialDashboardProps) => {
+  const { user, isAdmin, signOut } = useAuth();
   const [activeTable, setActiveTable] = useState<TableType>(initialTable);
 
   // Update active table when URL changes
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab') as TableType;
+    
+    // Public users can only access worker_income
+    if (!isAdmin && tab && tab !== 'worker_income') {
+      window.history.replaceState({}, '', '/?tab=worker_income');
+      setActiveTable('worker_income');
+      return;
+    }
+    
     if (tab && ['admin_income', 'worker_income', 'expenses', 'workers'].includes(tab)) {
       setActiveTable(tab);
+    } else {
+      // Default table based on user role
+      const defaultTable = isAdmin ? "admin_income" : "worker_income";
+      setActiveTable(defaultTable);
     }
-  }, []);
+  }, [isAdmin]);
   const [data, setData] = useState<DataRecord[]>([]);
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -256,18 +270,45 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
                 Sistem Keuangan
               </h1>
             </div>
+            <div className="flex items-center gap-2">
+              {!user ? (
+                <Button 
+                  onClick={() => window.location.href = '/admin-login'} 
+                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Login as Admin
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {isAdmin ? 'Admin' : 'Public'} Mode
+                  </span>
+                  <Button 
+                    onClick={signOut}
+                    variant="outline" 
+                    className="gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-3xl font-bold text-header">{tableLabels[activeTable]}</h2>
-              <Button 
-                onClick={handleCreate} 
-                className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
-              >
-                <Plus className="h-4 w-4" />
-                Tambah Data
-              </Button>
+              {isAdmin && (
+                <Button 
+                  onClick={handleCreate} 
+                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Data
+                </Button>
+              )}
             </div>
 
             {/* Search Bar */}
@@ -309,24 +350,29 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
               data={filteredData}
               tableType={activeTable}
               loading={loading}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={isAdmin ? handleEdit : undefined}
+              onDelete={isAdmin ? handleDelete : undefined}
+              isReadOnly={!isAdmin}
             />
           </div>
 
-          <DataModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            tableType={activeTable}
-            editingRecord={editingRecord}
-          />
+          {isAdmin && (
+            <>
+              <DataModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                tableType={activeTable}
+                editingRecord={editingRecord}
+              />
 
-          <DeleteConfirmModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={confirmDelete}
-            recordType={tableLabels[activeTable]}
-          />
+              <DeleteConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                recordType={tableLabels[activeTable]}
+              />
+            </>
+          )}
         </main>
       </div>
     </SidebarProvider>

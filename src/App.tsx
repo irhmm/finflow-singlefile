@@ -13,7 +13,7 @@ import LaporanKeuangan from "./pages/LaporanKeuangan";
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -23,15 +23,12 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <AuthForm onSuccess={() => window.location.reload()} />;
-  }
-
   return (
     <BrowserRouter>
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/admin-login" element={<AuthForm onSuccess={() => window.location.href = "/"} />} />
           <Route path="/pendapatan-admin" element={<Index />} />
           <Route path="/pendapatan-worker" element={<Index />} />
           <Route path="/pengeluaran" element={<Index />} />
