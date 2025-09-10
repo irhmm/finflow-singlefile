@@ -5,6 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { DataTable } from "./DataTable";
 import { DataModal } from "./DataModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { UserManagement } from "./UserManagement";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ interface FinancialDashboardProps {
 }
 
 export const FinancialDashboard = ({ initialTable = "worker_income" }: FinancialDashboardProps) => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, userRole, isAdmin, isSuperAdmin, canEdit, signOut } = useAuth();
   const [activeTable, setActiveTable] = useState<TableType>(initialTable);
 
   // Update active table when URL changes
@@ -70,8 +71,16 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab') as TableType;
     
-    // Public users can only access worker_income
-    if (!isAdmin && tab && tab !== 'worker_income') {
+    // Access control based on role
+    if (!user && tab && tab !== 'worker_income') {
+      // Anonymous users: only worker_income
+      window.history.replaceState({}, '', '/?tab=worker_income');
+      setActiveTable('worker_income');
+      return;
+    }
+    
+    if (userRole === 'admin' && tab && !['worker_income', 'admin_income'].includes(tab)) {
+      // Admin: only worker_income and admin_income
       window.history.replaceState({}, '', '/?tab=worker_income');
       setActiveTable('worker_income');
       return;
@@ -282,7 +291,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {isAdmin ? 'Admin' : 'Public'} Mode
+                    {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : 'Public'} Mode
                   </span>
                   <Button 
                     onClick={signOut}
@@ -300,7 +309,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-3xl font-bold text-header">{tableLabels[activeTable]}</h2>
-              {isAdmin && (
+              {canEdit && (
                 <Button 
                   onClick={handleCreate} 
                   className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
@@ -349,17 +358,24 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               </Card>
             )}
 
-            <DataTable
-              data={filteredData}
-              tableType={activeTable}
-              loading={loading}
-              onEdit={isAdmin ? handleEdit : undefined}
-              onDelete={isAdmin ? handleDelete : undefined}
-              isReadOnly={!isAdmin}
-            />
+        <DataTable
+          data={filteredData}
+          tableType={activeTable}
+          loading={loading}
+          onEdit={canEdit ? handleEdit : undefined}
+          onDelete={canEdit ? handleDelete : undefined}
+          isReadOnly={!canEdit}
+        />
+
+        {/* User Management Section - Only for Super Admin */}
+        {isSuperAdmin && (
+          <div className="mt-8">
+            <UserManagement />
+          </div>
+        )}
           </div>
 
-          {isAdmin && (
+          {canEdit && (
             <>
               <DataModal
                 isOpen={isModalOpen}

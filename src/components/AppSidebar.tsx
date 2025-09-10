@@ -62,7 +62,7 @@ const navigationItems = [
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
-  const { signOut, user, isAdmin } = useAuth();
+  const { signOut, user, userRole, isAdmin, isSuperAdmin } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -73,17 +73,42 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
     }
   };
 
-  // Filter navigation items based on user role
-  const filteredItems = navigationItems.filter(item => 
-    item.publicAccess || isAdmin
-  );
+  // Filter navigation items based on role permissions
+  const getVisibleItems = () => {
+    if (!user) {
+      // Anonymous users: only worker_income
+      return navigationItems.filter(item => item.table === 'worker_income');
+    }
+    
+    if (userRole === 'admin') {
+      // Admin: worker_income and admin_income only
+      return navigationItems.filter(item => 
+        item.table === 'worker_income' || item.table === 'admin_income'
+      );
+    }
+    
+    if (userRole === 'super_admin') {
+      // Super admin: all tables
+      return navigationItems;
+    }
+    
+    // Default: only worker_income
+    return navigationItems.filter(item => item.table === 'worker_income');
+  };
+
+  const filteredItems = getVisibleItems();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-secondary/20">
       <SidebarContent className="bg-gradient-to-b from-card to-secondary/5">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-header font-semibold">
+          <SidebarGroupLabel className="text-header font-semibold flex items-center justify-between">
             Sistem Keuangan
+            {user && (
+              <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
+                {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : 'User'}
+              </span>
+            )}
           </SidebarGroupLabel>
           
           <SidebarGroupContent>
