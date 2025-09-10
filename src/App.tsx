@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
 import PublicWorkerIncome from "./pages/PublicWorkerIncome";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -29,21 +30,30 @@ function AppContent() {
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
           {/* Public routes - accessible without authentication */}
+          <Route path="/" element={<Index />} />
           <Route path="/public/worker-income" element={<PublicWorkerIncome />} />
           
+          {/* Admin login route */}
+          <Route path="/admin" element={
+            !user ? (
+              <AuthForm onSuccess={() => window.location.href = '/dashboard'} />
+            ) : (
+              <AdminDashboard />
+            )
+          } />
+          
           {/* Protected routes - require authentication */}
-          {!user ? (
-            <Route path="*" element={<AuthForm onSuccess={() => window.location.reload()} />} />
-          ) : (
+          {user && (
             <>
-              <Route path="/" element={<Index />} />
-              <Route path="/pendapatan-admin" element={<Index />} />
-              <Route path="/pendapatan-worker" element={<Index />} />
-              <Route path="/pengeluaran" element={<Index />} />
+              <Route path="/dashboard" element={<AdminDashboard />} />
+              <Route path="/pendapatan-admin" element={<AdminDashboard />} />
+              <Route path="/pendapatan-worker" element={<AdminDashboard />} />
+              <Route path="/pengeluaran" element={<AdminDashboard />} />
               <Route path="/laporan-keuangan" element={<LaporanKeuangan />} />
-              <Route path="*" element={<NotFound />} />
             </>
           )}
+          
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
