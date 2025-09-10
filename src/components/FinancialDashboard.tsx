@@ -5,13 +5,11 @@ import { AppSidebar } from "./AppSidebar";
 import { DataTable } from "./DataTable";
 import { DataModal } from "./DataModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
-import { MonthlyRecap } from "./MonthlyRecap";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, BarChart3, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type TableType = "admin_income" | "worker_income" | "expenses";
 
@@ -47,7 +45,6 @@ const tableLabels = {
 };
 
 export const FinancialDashboard = () => {
-  const [activeTab, setActiveTab] = useState("data");
   const [activeTable, setActiveTable] = useState<TableType>("admin_income");
   const [data, setData] = useState<DataRecord[]>([]);
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
@@ -213,82 +210,68 @@ export const FinancialDashboard = () => {
           onTableChange={setActiveTable} 
         />
         
-        <main className="flex-1 p-6">
-          <div className="mb-6 flex items-center justify-between">
+        <main className="flex-1 p-6 bg-gradient-to-br from-background via-background to-secondary/5">
+          <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-header">
                 Sistem Keuangan
               </h1>
             </div>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="data" className="flex items-center gap-2">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-3xl font-bold text-header">{tableLabels[activeTable]}</h2>
+              <Button 
+                onClick={handleCreate} 
+                className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
+              >
                 <Plus className="h-4 w-4" />
-                Kelola Data
-              </TabsTrigger>
-              <TabsTrigger value="recap" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Rekap Bulanan
-              </TabsTrigger>
-            </TabsList>
+                Tambah Data
+              </Button>
+            </div>
 
-            <TabsContent value="data" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">{tableLabels[activeTable]}</h2>
-                <Button onClick={handleCreate} className="gap-2 bg-gradient-to-r from-secondary to-accent hover:from-secondary/90 hover:to-accent/90">
-                  <Plus className="h-4 w-4" />
-                  Tambah Data
-                </Button>
+            {/* Search Bar */}
+            <Card className="p-6 bg-gradient-to-r from-card to-secondary/5 border-secondary/20 shadow-elegant">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                <Input
+                  placeholder={`Cari data ${tableLabels[activeTable].toLowerCase()}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-12 h-12 bg-background/80 border-secondary/30 focus:border-secondary focus:ring-secondary/20 transition-all duration-300 text-lg"
+                />
               </div>
-
-              {/* Search Bar */}
-              <Card className="p-4 bg-gradient-to-r from-card to-secondary/10 border-secondary/20 shadow-card">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder={`Cari data ${tableLabels[activeTable].toLowerCase()}...`}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-background/80 border-secondary/30 focus:border-secondary focus:ring-secondary/20 transition-all duration-300"
-                  />
+              {searchQuery && (
+                <div className="mt-3 text-sm text-muted-foreground">
+                  Menampilkan {filteredData.length} dari {data.length} data
                 </div>
-                {searchQuery && (
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Menampilkan {filteredData.length} dari {data.length} data
-                  </div>
-                )}
-              </Card>
+              )}
+            </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-card">
-                <h3 className="text-lg font-semibold mb-2 text-secondary">
-                  Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
-                </h3>
-                <p className="text-3xl font-bold text-secondary">
-                  Rp {calculateTotal().toLocaleString("id-ID")}
+            <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
+              <h3 className="text-2xl font-bold mb-3 text-header">
+                Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
+              </h3>
+              <p className="text-4xl font-bold text-secondary">
+                Rp {calculateTotal().toLocaleString("id-ID")}
+              </p>
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  dari {data.length} total data
                 </p>
-                {searchQuery && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    dari {data.length} total data
-                  </p>
-                )}
-              </Card>
+              )}
+            </Card>
 
-              <DataTable
-                data={filteredData}
-                tableType={activeTable}
-                loading={loading}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            </TabsContent>
-
-            <TabsContent value="recap" className="space-y-6">
-              <MonthlyRecap />
-            </TabsContent>
-          </Tabs>
+            <DataTable
+              data={filteredData}
+              tableType={activeTable}
+              loading={loading}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </div>
 
           <DataModal
             isOpen={isModalOpen}
