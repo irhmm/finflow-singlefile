@@ -121,7 +121,7 @@ export const FinancialDashboard = () => {
           return (
             adminRecord.tanggal.toLowerCase().includes(query) ||
             (adminRecord.code && adminRecord.code.toLowerCase().includes(query)) ||
-            adminRecord.nominal.toString().includes(query)
+            (adminRecord.nominal && adminRecord.nominal.toString().includes(query))
           );
         case "worker_income":
           const workerRecord = record as WorkerIncome;
@@ -130,14 +130,14 @@ export const FinancialDashboard = () => {
             workerRecord.code.toLowerCase().includes(query) ||
             workerRecord.jobdesk.toLowerCase().includes(query) ||
             workerRecord.worker.toLowerCase().includes(query) ||
-            workerRecord.fee.toString().includes(query)
+            (workerRecord.fee && workerRecord.fee.toString().includes(query))
           );
         case "expenses":
           const expenseRecord = record as Expense;
           return (
             expenseRecord.tanggal.toLowerCase().includes(query) ||
             (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
-            expenseRecord.nominal.toString().includes(query)
+            (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
           );
         default:
           return false;
