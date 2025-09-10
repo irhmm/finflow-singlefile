@@ -23,25 +23,26 @@ const navigationItems = [
     title: "Pendapatan Admin",
     icon: CreditCard,
     table: "admin_income" as TableType,
-    path: "/?tab=admin_income"
+    isRoute: false
   },
   {
     title: "Pendapatan Worker", 
     icon: Users,
     table: "worker_income" as TableType,
-    path: "/?tab=worker_income"
+    isRoute: false
   },
   {
     title: "Pengeluaran",
     icon: TrendingDown,
     table: "expenses" as TableType,
-    path: "/?tab=expenses"
+    isRoute: false
   },
   {
     title: "Laporan Keuangan",
     icon: BarChart3,
     table: "laporan" as any,
-    path: "/laporan-keuangan"
+    path: "/laporan-keuangan",
+    isRoute: true
   }
 ];
 
@@ -65,7 +66,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                     isActive={activeTable === item.table}
                     className="hover:bg-secondary/10 hover:text-secondary data-[active=true]:bg-secondary data-[active=true]:text-white"
                   >
-                    {item.path.startsWith("/") ? (
+                    {item.isRoute ? (
                       <NavLink
                         to={item.path}
                         className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
@@ -76,9 +77,9 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                     ) : (
                       <button
                         onClick={() => {
-                          if (item.table !== "laporan") {
-                            onTableChange(item.table);
-                          }
+                          onTableChange(item.table);
+                          // Navigate to home with table parameter
+                          window.history.pushState({}, '', `/?tab=${item.table}`);
                         }}
                         className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
                       >

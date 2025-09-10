@@ -44,8 +44,12 @@ const tableLabels = {
   expenses: "Pengeluaran"
 };
 
-export const FinancialDashboard = () => {
-  const [activeTable, setActiveTable] = useState<TableType>("admin_income");
+interface FinancialDashboardProps {
+  initialTable?: TableType;
+}
+
+export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialDashboardProps) => {
+  const [activeTable, setActiveTable] = useState<TableType>(initialTable);
   const [data, setData] = useState<DataRecord[]>([]);
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,7 +258,7 @@ export const FinancialDashboard = () => {
               <h3 className="text-2xl font-bold mb-3 text-header">
                 Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
               </h3>
-              <p className="text-4xl font-bold text-secondary">
+              <p className="text-4xl font-bold text-header">
                 Rp {calculateTotal().toLocaleString("id-ID")}
               </p>
               {searchQuery && (
