@@ -9,6 +9,7 @@ import { AuthForm } from '@/components/AuthForm';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
+import AdminLogin from "./pages/AdminLogin";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -35,9 +36,10 @@ function AppContent() {
     <BrowserRouter>
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
-          {/* Public route for worker income */}
+          {/* Public routes */}
           <Route path="/" element={<Index />} />
           <Route path="/pendapatan-worker" element={<Index />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           
           {/* Protected routes for admin */}
           <Route path="/pendapatan-admin" element={

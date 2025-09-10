@@ -8,8 +8,9 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, LogIn, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export type TableType = "admin_income" | "worker_income" | "expenses";
 
@@ -50,6 +51,7 @@ interface FinancialDashboardProps {
 
 export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialDashboardProps) => {
   const [activeTable, setActiveTable] = useState<TableType>(initialTable);
+  const { user, signOut } = useAuth();
 
   // Update active table when URL changes
   useEffect(() => {
@@ -72,6 +74,14 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
   const loadData = async () => {
     setLoading(true);
     try {
+      // Skip loading admin data if user is not authenticated for protected tables
+      if (!user && (activeTable === "admin_income" || activeTable === "expenses")) {
+        setData([]);
+        setFilteredData([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: result, error } = await supabase
         .from(activeTable)
         .select("*")
@@ -96,6 +106,11 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
   useEffect(() => {
     loadData();
 
+    // Only set up subscription if user is authenticated for protected tables
+    if (!user && (activeTable === "admin_income" || activeTable === "expenses")) {
+      return;
+    }
+
     const channel = supabase
       .channel(`${activeTable}_changes`)
       .on(
@@ -114,7 +129,7 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeTable]);
+  }, [activeTable, user]);
 
   // Search functionality
   useEffect(() => {
@@ -231,18 +246,55 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
                 Sistem Keuangan
               </h1>
             </div>
+            
+            {/* Admin Controls */}
+            <div className="flex items-center gap-4">
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">
+                    Logged in as admin
+                  </span>
+                  <Button 
+                    onClick={signOut}
+                    variant="outline" 
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  {(activeTable === "admin_income" || activeTable === "expenses") && (
+                    <div className="text-sm text-muted-foreground">
+                      <p>Login diperlukan untuk mengakses data admin</p>
+                    </div>
+                  )}
+                  <Button 
+                    onClick={() => window.location.href = "/admin-login"}
+                    className="gap-2 bg-primary hover:bg-primary/90"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Login Admin
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-3xl font-bold text-header">{tableLabels[activeTable]}</h2>
-              <Button 
-                onClick={handleCreate} 
-                className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
-              >
-                <Plus className="h-4 w-4" />
-                Tambah Data
-              </Button>
+              {user && (
+                <Button 
+                  onClick={handleCreate} 
+                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Data
+                </Button>
+              )}
             </div>
 
             {/* Search Bar */}
