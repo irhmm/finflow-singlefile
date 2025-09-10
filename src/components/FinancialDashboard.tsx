@@ -162,13 +162,13 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
             (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
           );
         case "workers":
-          const workerRecord = record as Worker;
+          const dataWorkerRecord = record as Worker;
           return (
-            workerRecord.nama.toLowerCase().includes(query) ||
-            (workerRecord.rekening && workerRecord.rekening.toLowerCase().includes(query)) ||
-            (workerRecord.nomor_wa && workerRecord.nomor_wa.toLowerCase().includes(query)) ||
-            (workerRecord.role && workerRecord.role.toLowerCase().includes(query)) ||
-            workerRecord.status.toLowerCase().includes(query)
+            dataWorkerRecord.nama.toLowerCase().includes(query) ||
+            (dataWorkerRecord.rekening && dataWorkerRecord.rekening.toLowerCase().includes(query)) ||
+            (dataWorkerRecord.nomor_wa && dataWorkerRecord.nomor_wa.toLowerCase().includes(query)) ||
+            (dataWorkerRecord.role && dataWorkerRecord.role.toLowerCase().includes(query)) ||
+            dataWorkerRecord.status.toLowerCase().includes(query)
           );
         default:
           return false;
