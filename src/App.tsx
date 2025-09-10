@@ -3,18 +3,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/AuthForm';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
 
-const queryClient = new QueryClient();
-
-function AppContent() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -22,20 +20,42 @@ function AppContent() {
       </div>
     );
   }
-
+  
   if (!user) {
     return <AuthForm onSuccess={() => window.location.reload()} />;
   }
+  
+  return <>{children}</>;
+}
 
+const queryClient = new QueryClient();
+
+function AppContent() {
   return (
     <BrowserRouter>
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
+          {/* Public route for worker income */}
           <Route path="/" element={<Index />} />
-          <Route path="/pendapatan-admin" element={<Index />} />
           <Route path="/pendapatan-worker" element={<Index />} />
-          <Route path="/pengeluaran" element={<Index />} />
-          <Route path="/laporan-keuangan" element={<LaporanKeuangan />} />
+          
+          {/* Protected routes for admin */}
+          <Route path="/pendapatan-admin" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/pengeluaran" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/laporan-keuangan" element={
+            <ProtectedRoute>
+              <LaporanKeuangan />
+            </ProtectedRoute>
+          } />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
