@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-export type TableType = "admin_income" | "worker_income" | "expenses";
+export type TableType = "admin_income" | "worker_income" | "expenses" | "workers";
 
 export interface AdminIncome {
   id: number;
@@ -36,12 +36,24 @@ export interface Expense {
   keterangan?: string;
 }
 
-export type DataRecord = AdminIncome | WorkerIncome | Expense;
+export interface Worker {
+  id: number;
+  nama: string;
+  rekening?: string;
+  nomor_wa?: string;
+  role?: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type DataRecord = AdminIncome | WorkerIncome | Expense | Worker;
 
 const tableLabels = {
   admin_income: "Pendapatan Admin",
   worker_income: "Pendapatan Worker", 
-  expenses: "Pengeluaran"
+  expenses: "Pengeluaran",
+  workers: "Data Worker"
 };
 
 interface FinancialDashboardProps {
@@ -55,7 +67,7 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab') as TableType;
-    if (tab && ['admin_income', 'worker_income', 'expenses'].includes(tab)) {
+    if (tab && ['admin_income', 'worker_income', 'expenses', 'workers'].includes(tab)) {
       setActiveTable(tab);
     }
   }, []);
@@ -75,7 +87,7 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
       const { data: result, error } = await supabase
         .from(activeTable)
         .select("*")
-        .order("tanggal", { ascending: false });
+        .order(activeTable === "workers" ? "created_at" : "tanggal", { ascending: false });
 
       if (error) throw error;
       setData(result || []);
@@ -134,13 +146,13 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
             (adminRecord.nominal && adminRecord.nominal.toString().includes(query))
           );
         case "worker_income":
-          const workerRecord = record as WorkerIncome;
+          const workerIncomeRecord = record as WorkerIncome;
           return (
-            workerRecord.tanggal.toLowerCase().includes(query) ||
-            workerRecord.code.toLowerCase().includes(query) ||
-            workerRecord.jobdesk.toLowerCase().includes(query) ||
-            workerRecord.worker.toLowerCase().includes(query) ||
-            (workerRecord.fee && workerRecord.fee.toString().includes(query))
+            workerIncomeRecord.tanggal.toLowerCase().includes(query) ||
+            workerIncomeRecord.code.toLowerCase().includes(query) ||
+            workerIncomeRecord.jobdesk.toLowerCase().includes(query) ||
+            workerIncomeRecord.worker.toLowerCase().includes(query) ||
+            (workerIncomeRecord.fee && workerIncomeRecord.fee.toString().includes(query))
           );
         case "expenses":
           const expenseRecord = record as Expense;
@@ -148,6 +160,15 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
             expenseRecord.tanggal.toLowerCase().includes(query) ||
             (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
             (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
+          );
+        case "workers":
+          const workerRecord = record as Worker;
+          return (
+            workerRecord.nama.toLowerCase().includes(query) ||
+            (workerRecord.rekening && workerRecord.rekening.toLowerCase().includes(query)) ||
+            (workerRecord.nomor_wa && workerRecord.nomor_wa.toLowerCase().includes(query)) ||
+            (workerRecord.role && workerRecord.role.toLowerCase().includes(query)) ||
+            workerRecord.status.toLowerCase().includes(query)
           );
         default:
           return false;
@@ -205,6 +226,10 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
   };
 
   const calculateTotal = () => {
+    if (activeTable === "workers") {
+      return filteredData.length; // Show count for workers instead of total
+    }
+    
     return filteredData.reduce((total, record) => {
       if (activeTable === "worker_income") {
         const fee = (record as WorkerIncome).fee;
@@ -265,10 +290,13 @@ export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialD
 
             <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
               <h3 className="text-2xl font-bold mb-3 text-header">
-                Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
+                {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
               </h3>
               <p className="text-4xl font-bold text-header">
-                Rp {calculateTotal().toLocaleString("id-ID")}
+                {activeTable === "workers" 
+                  ? `${calculateTotal()} Worker`
+                  : `Rp ${calculateTotal().toLocaleString("id-ID")}`
+                }
               </p>
               {searchQuery && (
                 <p className="text-sm text-muted-foreground mt-2">

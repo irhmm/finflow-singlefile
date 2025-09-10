@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense } from "./FinancialDashboard";
+import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker } from "./FinancialDashboard";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,8 @@ interface DataModalProps {
 const tableLabels = {
   admin_income: "Pendapatan Admin",
   worker_income: "Pendapatan Worker",
-  expenses: "Pengeluaran"
+  expenses: "Pengeluaran",
+  workers: "Data Worker"
 };
 
 export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataModalProps) {
@@ -54,6 +55,15 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
         case "expenses":
           setFormData({ tanggal: today, keterangan: "", nominal: "" });
           break;
+        case "workers":
+          setFormData({ 
+            nama: "", 
+            rekening: "", 
+            nomor_wa: "", 
+            role: "", 
+            status: "aktif" 
+          });
+          break;
       }
     }
   }, [editingRecord, tableType, isOpen]);
@@ -72,6 +82,7 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
       } else if (tableType === "worker_income") {
         submitData.fee = parseFloat(submitData.fee);
       }
+      // Workers table doesn't need numeric conversion
 
       if (editingRecord) {
         // Update existing record
@@ -290,6 +301,82 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
                   className="col-span-3"
                   required
                 />
+              </div>
+            </div>
+          </>
+        );
+
+      case "workers":
+        return (
+          <>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nama" className="text-right">
+                  Nama
+                </Label>
+                <Input
+                  id="nama"
+                  type="text"
+                  placeholder="Nama worker"
+                  value={formData.nama || ""}
+                  onChange={(e) => handleInputChange("nama", e.target.value)}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="rekening" className="text-right">
+                  Rekening
+                </Label>
+                <Input
+                  id="rekening"
+                  type="text"
+                  placeholder="Nomor rekening"
+                  value={formData.rekening || ""}
+                  onChange={(e) => handleInputChange("rekening", e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nomor_wa" className="text-right">
+                  Nomor WA
+                </Label>
+                <Input
+                  id="nomor_wa"
+                  type="text"
+                  placeholder="Nomor WhatsApp"
+                  value={formData.nomor_wa || ""}
+                  onChange={(e) => handleInputChange("nomor_wa", e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="role" className="text-right">
+                  Role
+                </Label>
+                <Input
+                  id="role"
+                  type="text"
+                  placeholder="Role/posisi"
+                  value={formData.role || ""}
+                  onChange={(e) => handleInputChange("role", e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
+                <select
+                  id="status"
+                  value={formData.status || "aktif"}
+                  onChange={(e) => handleInputChange("status", e.target.value)}
+                  className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  required
+                >
+                  <option value="aktif">Aktif</option>
+                  <option value="non aktif">Non Aktif</option>
+                </select>
               </div>
             </div>
           </>

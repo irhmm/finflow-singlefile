@@ -1,4 +1,4 @@
-import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense } from "./FinancialDashboard";
+import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker } from "./FinancialDashboard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
@@ -82,6 +82,18 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
             <TableHead className="w-[100px]">Aksi</TableHead>
           </>
         );
+      case "workers":
+        return (
+          <>
+            <TableHead>No</TableHead>
+            <TableHead>Nama</TableHead>
+            <TableHead>Rekening</TableHead>
+            <TableHead>Nomor WA</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="w-[100px]">Aksi</TableHead>
+          </>
+        );
     }
   };
 
@@ -120,14 +132,14 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
         );
 
       case "worker_income":
-        const workerRecord = record as WorkerIncome;
+        const workerIncomeRecord = record as WorkerIncome;
         return (
-          <TableRow key={workerRecord.id}>
-            <TableCell>{formatDate(workerRecord.tanggal)}</TableCell>
-            <TableCell>{workerRecord.code}</TableCell>
-            <TableCell>{workerRecord.jobdesk}</TableCell>
-            <TableCell>{workerRecord.worker}</TableCell>
-            <TableCell>{formatCurrency(workerRecord.fee)}</TableCell>
+          <TableRow key={workerIncomeRecord.id}>
+            <TableCell>{formatDate(workerIncomeRecord.tanggal)}</TableCell>
+            <TableCell>{workerIncomeRecord.code}</TableCell>
+            <TableCell>{workerIncomeRecord.jobdesk}</TableCell>
+            <TableCell>{workerIncomeRecord.worker}</TableCell>
+            <TableCell>{formatCurrency(workerIncomeRecord.fee)}</TableCell>
             {commonActions}
           </TableRow>
         );
@@ -139,6 +151,28 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete }: DataTa
             <TableCell>{formatDate(expenseRecord.tanggal)}</TableCell>
             <TableCell>{expenseRecord.keterangan || "-"}</TableCell>
             <TableCell>{formatCurrency(expenseRecord.nominal)}</TableCell>
+            {commonActions}
+          </TableRow>
+        );
+
+      case "workers":
+        const workerRecord = record as Worker;
+        return (
+          <TableRow key={workerRecord.id}>
+            <TableCell>{workerRecord.id}</TableCell>
+            <TableCell>{workerRecord.nama}</TableCell>
+            <TableCell>{workerRecord.rekening || "-"}</TableCell>
+            <TableCell>{workerRecord.nomor_wa || "-"}</TableCell>
+            <TableCell>{workerRecord.role || "-"}</TableCell>
+            <TableCell>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                workerRecord.status === 'aktif' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {workerRecord.status}
+              </span>
+            </TableCell>
             {commonActions}
           </TableRow>
         );

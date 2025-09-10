@@ -1,4 +1,4 @@
-import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut } from "lucide-react";
+import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -37,6 +37,12 @@ const navigationItems = [
     title: "Pengeluaran",
     icon: TrendingDown,
     table: "expenses" as TableType,
+    isRoute: false
+  },
+  {
+    title: "Data Worker",
+    icon: UserCheck,
+    table: "workers" as TableType,
     isRoute: false
   },
   {
