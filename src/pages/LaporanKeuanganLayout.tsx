@@ -1,18 +1,18 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { FinancialDashboard } from "@/components/FinancialDashboard";
+import LaporanKeuangan from "./LaporanKeuangan";
 
-const Index = () => {
+const LaporanKeuanganLayout = () => {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-gradient-to-br from-background via-background to-secondary/5">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex-1">
-          <FinancialDashboard />
+          <LaporanKeuangan />
         </main>
       </div>
     </SidebarProvider>
   );
 };
 
-export default Index;
+export default LaporanKeuanganLayout;
