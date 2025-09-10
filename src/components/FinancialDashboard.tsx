@@ -8,7 +8,8 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { MonthlyRecap } from "./MonthlyRecap";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, BarChart3 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, BarChart3, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -49,7 +50,9 @@ export const FinancialDashboard = () => {
   const [activeTab, setActiveTab] = useState("data");
   const [activeTable, setActiveTable] = useState<TableType>("admin_income");
   const [data, setData] = useState<DataRecord[]>([]);
+  const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null);
@@ -66,6 +69,7 @@ export const FinancialDashboard = () => {
 
       if (error) throw error;
       setData(result || []);
+      setFilteredData(result || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -100,6 +104,51 @@ export const FinancialDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [activeTable]);
+
+  // Search functionality
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredData(data);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = data.filter((record) => {
+      switch (activeTable) {
+        case "admin_income":
+          const adminRecord = record as AdminIncome;
+          return (
+            adminRecord.tanggal.toLowerCase().includes(query) ||
+            (adminRecord.code && adminRecord.code.toLowerCase().includes(query)) ||
+            adminRecord.nominal.toString().includes(query)
+          );
+        case "worker_income":
+          const workerRecord = record as WorkerIncome;
+          return (
+            workerRecord.tanggal.toLowerCase().includes(query) ||
+            workerRecord.code.toLowerCase().includes(query) ||
+            workerRecord.jobdesk.toLowerCase().includes(query) ||
+            workerRecord.worker.toLowerCase().includes(query) ||
+            workerRecord.fee.toString().includes(query)
+          );
+        case "expenses":
+          const expenseRecord = record as Expense;
+          return (
+            expenseRecord.tanggal.toLowerCase().includes(query) ||
+            (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
+            expenseRecord.nominal.toString().includes(query)
+          );
+        default:
+          return false;
+      }
+    });
+    setFilteredData(filtered);
+  }, [searchQuery, data, activeTable]);
+
+  // Reset search when table changes
+  useEffect(() => {
+    setSearchQuery("");
   }, [activeTable]);
 
   const handleCreate = () => {
@@ -146,7 +195,7 @@ export const FinancialDashboard = () => {
   };
 
   const calculateTotal = () => {
-    return data.reduce((total, record) => {
+    return filteredData.reduce((total, record) => {
       if (activeTable === "worker_income") {
         const fee = (record as WorkerIncome).fee;
         return total + (fee && !isNaN(fee) ? fee : 0);
@@ -195,15 +244,40 @@ export const FinancialDashboard = () => {
                 </Button>
               </div>
 
+              {/* Search Bar */}
+              <Card className="p-4 bg-gradient-to-r from-card to-secondary/10 border-secondary/20 shadow-card">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder={`Cari data ${tableLabels[activeTable].toLowerCase()}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-background/80 border-secondary/30 focus:border-secondary focus:ring-secondary/20 transition-all duration-300"
+                  />
+                </div>
+                {searchQuery && (
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Menampilkan {filteredData.length} dari {data.length} data
+                  </div>
+                )}
+              </Card>
+
               <Card className="p-4 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-card">
-                <h3 className="text-lg font-semibold mb-2 text-secondary">Total {tableLabels[activeTable]}</h3>
+                <h3 className="text-lg font-semibold mb-2 text-secondary">
+                  Total {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
+                </h3>
                 <p className="text-3xl font-bold text-secondary">
                   Rp {calculateTotal().toLocaleString("id-ID")}
                 </p>
+                {searchQuery && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    dari {data.length} total data
+                  </p>
+                )}
               </Card>
 
               <DataTable
-                data={data}
+                data={filteredData}
                 tableType={activeTable}
                 loading={loading}
                 onEdit={handleEdit}
