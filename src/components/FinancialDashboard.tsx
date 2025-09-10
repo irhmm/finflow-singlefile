@@ -329,22 +329,25 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               )}
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
-              <h3 className="text-2xl font-bold mb-3 text-header">
-                {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
-              </h3>
-              <p className="text-4xl font-bold text-header">
-                {activeTable === "workers" 
-                  ? `${calculateTotal()} Worker`
-                  : `Rp ${calculateTotal().toLocaleString("id-ID")}`
-                }
-              </p>
-              {searchQuery && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  dari {data.length} total data
+            {/* Hide total for worker_income in public mode */}
+            {!(activeTable === "worker_income" && !isAdmin) && (
+              <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
+                <h3 className="text-2xl font-bold mb-3 text-header">
+                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
+                </h3>
+                <p className="text-4xl font-bold text-header">
+                  {activeTable === "workers" 
+                    ? `${calculateTotal()} Worker`
+                    : `Rp ${calculateTotal().toLocaleString("id-ID")}`
+                  }
                 </p>
-              )}
-            </Card>
+                {searchQuery && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    dari {data.length} total data
+                  </p>
+                )}
+              </Card>
+            )}
 
             <DataTable
               data={filteredData}

@@ -1,4 +1,5 @@
 import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker } from "./FinancialDashboard";
+import { WorkerIncomeTable } from "./WorkerIncomeTable";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
@@ -21,6 +22,18 @@ interface DataTableProps {
 }
 
 export function DataTable({ data, tableType, loading, onEdit, onDelete, isReadOnly = false }: DataTableProps) {
+  // Use special component for worker_income table
+  if (tableType === "worker_income") {
+    return (
+      <WorkerIncomeTable
+        data={data as WorkerIncome[]}
+        loading={loading}
+        onEdit={onEdit as ((record: WorkerIncome) => void) | undefined}
+        onDelete={onDelete as ((record: WorkerIncome) => void) | undefined}
+        isReadOnly={isReadOnly}
+      />
+    );
+  }
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID");
   };
@@ -60,17 +73,6 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete, isReadOn
             <TableHead>Tanggal</TableHead>
             <TableHead>Code</TableHead>
             <TableHead>Nominal</TableHead>
-            {!isReadOnly && <TableHead className="w-[100px]">Aksi</TableHead>}
-          </>
-        );
-      case "worker_income":
-        return (
-          <>
-            <TableHead>Tanggal</TableHead>
-            <TableHead>Kode</TableHead>
-            <TableHead>Jobdesk</TableHead>
-            <TableHead>Worker</TableHead>
-            <TableHead>Fee</TableHead>
             {!isReadOnly && <TableHead className="w-[100px]">Aksi</TableHead>}
           </>
         );
@@ -128,19 +130,6 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete, isReadOn
             <TableCell>{formatDate(adminRecord.tanggal)}</TableCell>
             <TableCell>{adminRecord.code || "-"}</TableCell>
             <TableCell>{formatCurrency(adminRecord.nominal)}</TableCell>
-            {commonActions}
-          </TableRow>
-        );
-
-      case "worker_income":
-        const workerIncomeRecord = record as WorkerIncome;
-        return (
-          <TableRow key={workerIncomeRecord.id}>
-            <TableCell>{formatDate(workerIncomeRecord.tanggal)}</TableCell>
-            <TableCell>{workerIncomeRecord.code}</TableCell>
-            <TableCell>{workerIncomeRecord.jobdesk}</TableCell>
-            <TableCell>{workerIncomeRecord.worker}</TableCell>
-            <TableCell>{formatCurrency(workerIncomeRecord.fee)}</TableCell>
             {commonActions}
           </TableRow>
         );
