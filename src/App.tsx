@@ -9,6 +9,7 @@ import { AuthForm } from '@/components/AuthForm';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
+import PublicWorkerIncome from "./pages/PublicWorkerIncome";
 
 const queryClient = new QueryClient();
 
@@ -23,20 +24,26 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <AuthForm onSuccess={() => window.location.reload()} />;
-  }
-
   return (
     <BrowserRouter>
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/pendapatan-admin" element={<Index />} />
-          <Route path="/pendapatan-worker" element={<Index />} />
-          <Route path="/pengeluaran" element={<Index />} />
-          <Route path="/laporan-keuangan" element={<LaporanKeuangan />} />
-          <Route path="*" element={<NotFound />} />
+          {/* Public routes - accessible without authentication */}
+          <Route path="/public/worker-income" element={<PublicWorkerIncome />} />
+          
+          {/* Protected routes - require authentication */}
+          {!user ? (
+            <Route path="*" element={<AuthForm onSuccess={() => window.location.reload()} />} />
+          ) : (
+            <>
+              <Route path="/" element={<Index />} />
+              <Route path="/pendapatan-admin" element={<Index />} />
+              <Route path="/pendapatan-worker" element={<Index />} />
+              <Route path="/pengeluaran" element={<Index />} />
+              <Route path="/laporan-keuangan" element={<LaporanKeuangan />} />
+              <Route path="*" element={<NotFound />} />
+            </>
+          )}
         </Routes>
       </Suspense>
     </BrowserRouter>
