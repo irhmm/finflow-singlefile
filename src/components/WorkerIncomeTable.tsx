@@ -148,9 +148,9 @@ export function WorkerIncomeTable({
       <TableCell>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-xs font-medium text-primary">
-            {record.worker.charAt(0).toUpperCase()}
+            {record.worker && record.worker.length > 0 ? record.worker.charAt(0).toUpperCase() : '?'}
           </div>
-          <span className="font-medium">{record.worker}</span>
+          <span className="font-medium">{record.worker || 'Unknown Worker'}</span>
         </div>
       </TableCell>
       <TableCell className="text-right">
