@@ -1,5 +1,5 @@
 import { CreditCard, Users, TrendingDown, BarChart3, Menu } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +48,7 @@ const navigationItems = [
 
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
+  const navigate = useNavigate();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-secondary/20">
@@ -78,8 +79,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                       <button
                         onClick={() => {
                           onTableChange(item.table);
-                          // Navigate to home with table parameter
-                          window.history.pushState({}, '', `/?tab=${item.table}`);
+                          navigate(`/?tab=${item.table}`);
                         }}
                         className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
                       >

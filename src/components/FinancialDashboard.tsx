@@ -50,6 +50,15 @@ interface FinancialDashboardProps {
 
 export const FinancialDashboard = ({ initialTable = "admin_income" }: FinancialDashboardProps) => {
   const [activeTable, setActiveTable] = useState<TableType>(initialTable);
+
+  // Update active table when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab') as TableType;
+    if (tab && ['admin_income', 'worker_income', 'expenses'].includes(tab)) {
+      setActiveTable(tab);
+    }
+  }, []);
   const [data, setData] = useState<DataRecord[]>([]);
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
