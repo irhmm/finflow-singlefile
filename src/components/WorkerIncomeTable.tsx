@@ -41,7 +41,7 @@ export function WorkerIncomeTable({
   isReadOnly = false,
   totalItems = 0,
   currentPage = 1,
-  itemsPerPage = 10,
+  itemsPerPage = 15,
   onPageChange
 }: WorkerIncomeTableProps) {
   const formatDate = (dateString: string) => {
@@ -185,14 +185,7 @@ export function WorkerIncomeTable({
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
-    <div className="space-y-4">
-      {/* Pagination Info */}
-      {totalItems > 0 && (
-        <div className="text-sm text-muted-foreground">
-          Menampilkan {startIndex + 1} hingga {endIndex} dari {totalItems} data
-        </div>
-      )}
-      
+    <div className="space-y-6">
       <Tabs defaultValue="daily" className="space-y-4">
       <div className="flex items-center justify-between">
         <TabsList className="bg-muted/50 border border-border/50">
@@ -310,64 +303,79 @@ export function WorkerIncomeTable({
 
     {/* Pagination */}
     {totalItems > itemsPerPage && onPageChange && (
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                if (currentPage > 1) onPageChange(currentPage - 1);
-              }}
-              className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-            />
-          </PaginationItem>
-          
-          {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
-            .filter(page => {
-              const totalPages = Math.ceil(totalItems / itemsPerPage);
-              if (totalPages <= 7) return true;
-              if (page === 1 || page === totalPages) return true;
-              if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-              return false;
-            })
-            .map((page, index, array) => {
-              const prevPage = array[index - 1];
-              const showEllipsis = prevPage && page - prevPage > 1;
-              
-              return (
-                <PaginationItem key={page}>
-                  {showEllipsis && (
-                    <span className="px-3 py-2 text-muted-foreground">...</span>
-                  )}
-                  <PaginationLink
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onPageChange(page);
-                    }}
-                    isActive={currentPage === page}
-                  >
-                    {page}
-                  </PaginationLink>
-                </PaginationItem>
-              );
-            })}
-          
-          <PaginationItem>
-            <PaginationNext 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                if (currentPage < Math.ceil(totalItems / itemsPerPage)) {
-                  onPageChange(currentPage + 1);
-                }
-              }}
-              className={currentPage >= Math.ceil(totalItems / itemsPerPage) ? "pointer-events-none opacity-50" : ""}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <div className="flex items-center justify-between bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
+        <div className="text-sm text-muted-foreground">
+          Showing {startIndex + 1} to {endIndex} of {totalItems}
+        </div>
+        
+        <Pagination>
+          <PaginationContent className="gap-1">
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) onPageChange(currentPage - 1);
+                }}
+                className={`border border-border/50 hover:bg-muted/50 ${
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }`}
+              />
+            </PaginationItem>
+            
+            {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
+              .filter(page => {
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                if (page >= currentPage - 2 && page <= currentPage + 2) return true;
+                return false;
+              })
+              .map((page, index, array) => {
+                const prevPage = array[index - 1];
+                const showEllipsis = prevPage && page - prevPage > 1;
+                
+                return (
+                  <PaginationItem key={page}>
+                    {showEllipsis && (
+                      <span className="px-3 py-2 text-muted-foreground text-sm">...</span>
+                    )}
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onPageChange(page);
+                      }}
+                      isActive={currentPage === page}
+                      className={`border border-border/50 min-w-[40px] h-10 rounded-md transition-all duration-200 ${
+                        currentPage === page 
+                          ? "bg-[#3b82f6] text-white border-[#3b82f6] hover:bg-[#2563eb]" 
+                          : "hover:bg-muted/50"
+                      }`}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+            
+            <PaginationItem>
+              <PaginationNext 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < Math.ceil(totalItems / itemsPerPage)) {
+                    onPageChange(currentPage + 1);
+                  }
+                }}
+                className={`border border-border/50 hover:bg-muted/50 ${
+                  currentPage >= Math.ceil(totalItems / itemsPerPage) ? "pointer-events-none opacity-50" : ""
+                }`}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     )}
     </div>
   );
