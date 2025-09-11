@@ -294,16 +294,35 @@ export default function LaporanKeuangan() {
             </div>
 
             {/* Monthly Chart */}
-            <Card className="bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-header">
-                  Grafik Bulanan - {selectedYear}
-                </CardTitle>
+            <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                      Grafik Bulanan
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Total data per bulan {selectedYear}
+                    </p>
+                  </div>
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger className="w-28 h-9 bg-blue-50 border-blue-200 text-blue-700 font-medium">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableYears.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                   </div>
                 ) : (
                   <ChartContainer
@@ -339,22 +358,30 @@ export default function LaporanKeuangan() {
                         margin={{
                           top: 20,
                           right: 30,
-                          left: 20,
+                          left: 40,
                           bottom: 5,
                         }}
+                        maxBarSize={40}
                       >
-                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                         <XAxis 
                           dataKey="month" 
-                          className="text-sm"
+                          className="text-xs"
                           tickLine={false}
                           axisLine={false}
+                          tick={{ fill: '#6b7280', fontSize: 12 }}
                         />
                         <YAxis 
-                          className="text-sm"
+                          className="text-xs"
                           tickLine={false}
                           axisLine={false}
-                          tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                          tick={{ fill: '#6b7280', fontSize: 12 }}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B`;
+                            if (value >= 1000000) return `${(value / 1000000).toFixed(0)}M`;
+                            if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                            return value.toString();
+                          }}
                         />
                         <ChartTooltip
                           content={<ChartTooltipContent 
@@ -365,29 +392,32 @@ export default function LaporanKeuangan() {
                             }).format(value as number)}
                           />}
                         />
-                        <ChartLegend content={<ChartLegendContent />} />
+                        <ChartLegend 
+                          content={<ChartLegendContent />} 
+                          wrapperStyle={{ paddingTop: '20px' }}
+                        />
                         <Bar 
                           dataKey="workerIncome" 
                           fill="hsl(221, 83%, 53%)"
-                          radius={[2, 2, 0, 0]}
+                          radius={[3, 3, 0, 0]}
                           name="Pendapatan Worker"
                         />
                         <Bar 
                           dataKey="adminIncome" 
                           fill="hsl(142, 76%, 36%)"
-                          radius={[2, 2, 0, 0]}
+                          radius={[3, 3, 0, 0]}
                           name="Pendapatan Admin"
                         />
                         <Bar 
                           dataKey="expenses" 
                           fill="hsl(0, 84%, 60%)"
-                          radius={[2, 2, 0, 0]}
+                          radius={[3, 3, 0, 0]}
                           name="Pengeluaran"
                         />
                         <Bar 
                           dataKey="omset" 
                           fill="hsl(262, 83%, 58%)"
-                          radius={[2, 2, 0, 0]}
+                          radius={[3, 3, 0, 0]}
                           name="Omset"
                         />
                       </BarChart>
