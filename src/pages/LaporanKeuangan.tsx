@@ -72,30 +72,47 @@ export default function LaporanKeuangan() {
   const loadFinancialData = async () => {
     setLoading(true);
     try {
-      // Load data for selected year and previous year
+      // Load data for selected year and previous month
       const currentYear = parseInt(selectedYear);
-      const previousYear = currentYear - 1;
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // 1-12
+      
+      // Calculate previous month
+      let previousMonth, previousYear;
+      if (currentMonth === 1) {
+        previousMonth = 12;
+        previousYear = currentYear - 1;
+      } else {
+        previousMonth = currentMonth - 1;
+        previousYear = currentYear;
+      }
       
       const [adminResult, workerResult, expensesResult, prevAdminResult, prevWorkerResult, prevExpensesResult] = await Promise.all([
         supabase.from("admin_income").select("nominal, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`),
         supabase.from("worker_income").select("fee, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`),
         supabase.from("expenses").select("nominal, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`),
-        supabase.from("admin_income").select("nominal, tanggal").gte("tanggal", `${previousYear}-01-01`).lte("tanggal", `${previousYear}-12-31`),
-        supabase.from("worker_income").select("fee, tanggal").gte("tanggal", `${previousYear}-01-01`).lte("tanggal", `${previousYear}-12-31`),
-        supabase.from("expenses").select("nominal, tanggal").gte("tanggal", `${previousYear}-01-01`).lte("tanggal", `${previousYear}-12-31`)
+        supabase.from("admin_income").select("nominal, tanggal").gte("tanggal", `${previousYear}-${previousMonth.toString().padStart(2, '0')}-01`).lte("tanggal", `${previousYear}-${previousMonth.toString().padStart(2, '0')}-31`),
+        supabase.from("worker_income").select("fee, tanggal").gte("tanggal", `${previousYear}-${previousMonth.toString().padStart(2, '0')}-01`).lte("tanggal", `${previousYear}-${previousMonth.toString().padStart(2, '0')}-31`),
+        supabase.from("expenses").select("nominal, tanggal").gte("tanggal", `${previousYear}-${previousMonth.toString().padStart(2, '0')}-01`).lte("tanggal", `${previousYear}-${previousMonth.toString().padStart(2, '0')}-31`)
       ]);
 
       if (adminResult.error) throw adminResult.error;
       if (workerResult.error) throw workerResult.error;
       if (expensesResult.error) throw expensesResult.error;
 
-      // Calculate yearly totals
-      const totalAdminIncome = adminResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
-      const totalWorkerIncome = workerResult.data?.reduce((total, record) => total + (record.fee || 0), 0) || 0;
-      const totalExpenses = expensesResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
+      // Calculate current month totals (from this month of current year)
+      const currentMonthData = {
+        admin: adminResult.data?.filter(record => new Date(record.tanggal).getMonth() === currentMonth - 1) || [],
+        worker: workerResult.data?.filter(record => new Date(record.tanggal).getMonth() === currentMonth - 1) || [],
+        expenses: expensesResult.data?.filter(record => new Date(record.tanggal).getMonth() === currentMonth - 1) || []
+      };
+
+      const totalAdminIncome = currentMonthData.admin.reduce((total, record) => total + (record.nominal || 0), 0);
+      const totalWorkerIncome = currentMonthData.worker.reduce((total, record) => total + (record.fee || 0), 0);
+      const totalExpenses = currentMonthData.expenses.reduce((total, record) => total + (record.nominal || 0), 0);
       const omset = totalAdminIncome + totalWorkerIncome - totalExpenses;
 
-      // Calculate previous year totals
+      // Calculate previous month totals
       const previousAdminIncome = prevAdminResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
       const previousWorkerIncome = prevWorkerResult.data?.reduce((total, record) => total + (record.fee || 0), 0) || 0;
       const previousExpenses = prevExpensesResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
@@ -112,7 +129,7 @@ export default function LaporanKeuangan() {
         previousOmset
       });
 
-      // Calculate monthly breakdown
+      // Calculate monthly breakdown for chart and table
       const monthlyBreakdown: { [key: string]: MonthlyData } = {};
       
       // Initialize all months
@@ -280,7 +297,7 @@ export default function LaporanKeuangan() {
                           {loading ? "..." : formatCurrency(card.value)}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                          {isPositive ? "+" : ""}{percentageChange.toFixed(1)}% vs tahun lalu
+                          {isPositive ? "+" : ""}{percentageChange.toFixed(1)}% vs bulan lalu
                         </p>
                       </div>
                     </CardContent>
