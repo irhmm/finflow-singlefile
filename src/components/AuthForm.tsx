@@ -11,7 +11,6 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ onSuccess }: AuthFormProps) {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,36 +20,18 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) {
-          toast.error(error.message);
-          return;
-        }
-
-        toast.success('Login berhasil!');
-        onSuccess();
-      } else {
-        const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: redirectUrl
-          }
-        });
-
-        if (error) {
-          toast.error(error.message);
-          return;
-        }
-
-        toast.success('Akun berhasil dibuat! Silakan cek email untuk verifikasi.');
+      if (error) {
+        toast.error(error.message);
+        return;
       }
+
+      toast.success('Login berhasil!');
+      onSuccess();
     } catch (error) {
       toast.error('Terjadi kesalahan yang tidak terduga');
     } finally {
@@ -63,13 +44,10 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
-            {isLogin ? 'Login' : 'Daftar'}
+            Login
           </CardTitle>
           <CardDescription>
-            {isLogin 
-              ? 'Masukkan kredensial Anda untuk mengakses sistem keuangan'
-              : 'Buat akun baru untuk mengakses sistem keuangan'
-            }
+            Masukkan kredensial Anda untuk mengakses sistem keuangan
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,21 +75,9 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Loading...' : (isLogin ? 'Login' : 'Daftar')}
+              {loading ? 'Loading...' : 'Login'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-primary underline"
-            >
-              {isLogin 
-                ? 'Belum punya akun? Daftar di sini'
-                : 'Sudah punya akun? Login di sini'
-              }
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
