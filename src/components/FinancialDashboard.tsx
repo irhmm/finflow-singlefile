@@ -316,7 +316,30 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       return filteredData.length; // Show count for workers instead of total
     }
     
-    return filteredData.reduce((total, record) => {
+    // Get data to calculate from - use current month data if no filters applied
+    let dataToCalculate = filteredData;
+    
+    // Check if any filters are applied (excluding search)
+    const hasFilters = filters.selectedCode !== "all" || 
+                      filters.selectedWorker !== "all" || 
+                      filters.selectedMonth !== "all" || 
+                      filters.selectedRole !== "all" || 
+                      filters.selectedStatus !== "all";
+    
+    // If no filters and no search, calculate only current month for tables with date
+    const isDateBasedTable = activeTable === "admin_income" || activeTable === "worker_income" || activeTable === "expenses";
+    if (!hasFilters && !searchQuery.trim() && isDateBasedTable) {
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      
+      dataToCalculate = data.filter((record) => {
+        const recordDate = new Date((record as any).tanggal);
+        return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+      });
+    }
+    
+    return dataToCalculate.reduce((total, record) => {
       if (activeTable === "worker_income") {
         const fee = (record as WorkerIncome).fee;
         return total + (fee && !isNaN(fee) ? fee : 0);
@@ -388,7 +411,11 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
-                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {(searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all")) ? "(Hasil Filter)" : ""}
+                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {
+                    (searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all") || (filters.selectedRole !== "all") || (filters.selectedStatus !== "all")) 
+                      ? "(Hasil Filter)" 
+                      : activeTable !== "workers" ? "(Bulan Ini)" : ""
+                  }
                 </h3>
                 <p className="text-4xl font-bold text-header">
                   {activeTable === "workers" 
