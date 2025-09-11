@@ -342,7 +342,7 @@ export default function LaporanKeuangan() {
                     config={{
                       workerIncome: {
                         label: "Pendapatan Worker",
-                        color: "hsl(221, 83%, 53%)",
+                        color: "hsl(262, 83%, 58%)",
                       },
                       adminIncome: {
                         label: "Pendapatan Admin", 
@@ -354,7 +354,7 @@ export default function LaporanKeuangan() {
                       },
                       omset: {
                         label: "Omset",
-                        color: "hsl(262, 83%, 58%)",
+                        color: "hsl(221, 83%, 53%)",
                       },
                     }}
                     className="h-[400px] w-full"
@@ -439,7 +439,7 @@ export default function LaporanKeuangan() {
                         />
                         <Bar 
                           dataKey="workerIncome" 
-                          fill="hsl(221, 83%, 53%)"
+                          fill="hsl(262, 83%, 58%)"
                           radius={[3, 3, 0, 0]}
                           name="Pendapatan Worker"
                         />
@@ -457,7 +457,7 @@ export default function LaporanKeuangan() {
                         />
                         <Bar 
                           dataKey="omset" 
-                          fill="hsl(262, 83%, 58%)"
+                          fill="hsl(221, 83%, 53%)"
                           radius={[3, 3, 0, 0]}
                           name="Omset"
                         />
