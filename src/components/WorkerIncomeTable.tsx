@@ -367,12 +367,13 @@ export function WorkerIncomeTable({
 
     {/* Pagination */}
     {totalItems > itemsPerPage && onPageChange && (
-      <div className="flex items-center justify-between bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
+      <div className="flex items-center bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
         <div className="text-sm text-muted-foreground">
           Showing {startIndex + 1} to {endIndex} of {totalItems}
         </div>
         
-        <Pagination>
+        <div className="ml-auto">
+          <Pagination>
           <PaginationContent className="gap-1">
             <PaginationItem>
               <PaginationPrevious 
@@ -437,8 +438,9 @@ export function WorkerIncomeTable({
                 }`}
               />
             </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+           </PaginationContent>
+          </Pagination>
+        </div>
       </div>
     )}
     </div>
