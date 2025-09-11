@@ -384,8 +384,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             </div>
 
 
-            {/* Hide total for worker_income in public mode */}
-            {!(activeTable === "worker_income" && !isAdmin) && (
+            {/* Show total for worker_income in public mode only when both month and worker filters are selected */}
+            {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
                   {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {(searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all")) ? "(Hasil Filter)" : ""}
