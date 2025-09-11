@@ -13,6 +13,10 @@ interface FinancialSummary {
   totalWorkerIncome: number;
   totalExpenses: number;
   omset: number;
+  previousAdminIncome: number;
+  previousWorkerIncome: number;
+  previousExpenses: number;
+  previousOmset: number;
 }
 
 interface MonthlyData {
@@ -29,7 +33,11 @@ export default function LaporanKeuangan() {
     totalAdminIncome: 0,
     totalWorkerIncome: 0,
     totalExpenses: 0,
-    omset: 0
+    omset: 0,
+    previousAdminIncome: 0,
+    previousWorkerIncome: 0,
+    previousExpenses: 0,
+    previousOmset: 0
   });
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,13 +70,17 @@ export default function LaporanKeuangan() {
   const loadFinancialData = async () => {
     setLoading(true);
     try {
-      // Load data for selected year
-      const yearFilter = `${selectedYear}-01-01,${selectedYear}-12-31`;
+      // Load data for selected year and previous year
+      const currentYear = parseInt(selectedYear);
+      const previousYear = currentYear - 1;
       
-      const [adminResult, workerResult, expensesResult] = await Promise.all([
+      const [adminResult, workerResult, expensesResult, prevAdminResult, prevWorkerResult, prevExpensesResult] = await Promise.all([
         supabase.from("admin_income").select("nominal, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`),
         supabase.from("worker_income").select("fee, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`),
-        supabase.from("expenses").select("nominal, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`)
+        supabase.from("expenses").select("nominal, tanggal").gte("tanggal", `${selectedYear}-01-01`).lte("tanggal", `${selectedYear}-12-31`),
+        supabase.from("admin_income").select("nominal, tanggal").gte("tanggal", `${previousYear}-01-01`).lte("tanggal", `${previousYear}-12-31`),
+        supabase.from("worker_income").select("fee, tanggal").gte("tanggal", `${previousYear}-01-01`).lte("tanggal", `${previousYear}-12-31`),
+        supabase.from("expenses").select("nominal, tanggal").gte("tanggal", `${previousYear}-01-01`).lte("tanggal", `${previousYear}-12-31`)
       ]);
 
       if (adminResult.error) throw adminResult.error;
@@ -81,11 +93,21 @@ export default function LaporanKeuangan() {
       const totalExpenses = expensesResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
       const omset = totalAdminIncome + totalWorkerIncome - totalExpenses;
 
+      // Calculate previous year totals
+      const previousAdminIncome = prevAdminResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
+      const previousWorkerIncome = prevWorkerResult.data?.reduce((total, record) => total + (record.fee || 0), 0) || 0;
+      const previousExpenses = prevExpensesResult.data?.reduce((total, record) => total + (record.nominal || 0), 0) || 0;
+      const previousOmset = previousAdminIncome + previousWorkerIncome - previousExpenses;
+
       setSummary({
         totalAdminIncome,
         totalWorkerIncome,
         totalExpenses,
-        omset
+        omset,
+        previousAdminIncome,
+        previousWorkerIncome,
+        previousExpenses,
+        previousOmset
       });
 
       // Calculate monthly breakdown
@@ -162,30 +184,43 @@ export default function LaporanKeuangan() {
     }).format(amount);
   };
 
+  const calculatePercentageChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  };
+
   const summaryCards = [
     {
-      title: "Total Pendapatan",
-      value: summary.totalAdminIncome + summary.totalWorkerIncome,
+      title: "Total Pendapatan Worker",
+      value: summary.totalWorkerIncome,
+      previousValue: summary.previousWorkerIncome,
       icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950",
-      textColor: "text-green-600"
+      bgColor: "bg-white dark:bg-gray-800",
+      textColor: "text-gray-900 dark:text-gray-100"
+    },
+    {
+      title: "Total Pendapatan Admin",
+      value: summary.totalAdminIncome,
+      previousValue: summary.previousAdminIncome,
+      icon: TrendingUp,
+      bgColor: "bg-white dark:bg-gray-800",
+      textColor: "text-gray-900 dark:text-gray-100"
     },
     {
       title: "Total Pengeluaran",
       value: summary.totalExpenses,
+      previousValue: summary.previousExpenses,
       icon: TrendingDown,
-      color: "text-red-600", 
-      bgColor: "bg-red-50 dark:bg-red-950",
-      textColor: "text-red-600"
+      bgColor: "bg-white dark:bg-gray-800",
+      textColor: "text-gray-900 dark:text-gray-100"
     },
     {
-      title: "Saldo Bersih",
+      title: "Total Omset Bulanan",
       value: summary.omset,
+      previousValue: summary.previousOmset,
       icon: DollarSign,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950",
-      textColor: "text-blue-600"
+      bgColor: "bg-white dark:bg-gray-800",
+      textColor: "text-gray-900 dark:text-gray-100"
     }
   ];
 
@@ -221,22 +256,34 @@ export default function LaporanKeuangan() {
 
           <div className="space-y-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {summaryCards.map((card, index) => {
                 const Icon = card.icon;
+                const percentageChange = calculatePercentageChange(card.value, card.previousValue);
+                const isPositive = percentageChange >= 0;
+                const changeColor = isPositive ? "text-green-600" : "text-red-600";
+                const ChangeIcon = isPositive ? TrendingUp : TrendingDown;
+                
                 return (
-                  <Card key={index} className={`${card.bgColor} border-0 shadow-elegant hover:shadow-lg transition-all duration-300`}>
+                  <Card key={index} className={`${card.bgColor} border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all duration-300`}>
                     <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-2">
-                            {card.title}
-                          </p>
-                          <div className={`text-3xl font-bold ${card.textColor} ${loading ? 'animate-pulse' : ''}`}>
-                            {loading ? "..." : formatCurrency(card.value)}
-                          </div>
+                      <div className="flex items-center justify-between mb-4">
+                        <Icon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+                        <div className={`flex items-center gap-1 text-sm font-medium ${changeColor}`}>
+                          <ChangeIcon className="h-4 w-4" />
+                          {Math.abs(percentageChange).toFixed(1)}%
                         </div>
-                        <Icon className={`h-8 w-8 ${card.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                          {card.title}
+                        </p>
+                        <div className={`text-2xl font-bold ${card.textColor} ${loading ? 'animate-pulse' : ''}`}>
+                          {loading ? "..." : formatCurrency(card.value)}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                          {isPositive ? "+" : ""}{percentageChange.toFixed(1)}% vs tahun lalu
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
