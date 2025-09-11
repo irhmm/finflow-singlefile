@@ -166,34 +166,34 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         case "admin_income":
           const adminRecord = record as AdminIncome;
           return (
-            adminRecord.tanggal.toLowerCase().includes(query) ||
+            (adminRecord.tanggal && adminRecord.tanggal.toLowerCase().includes(query)) ||
             (adminRecord.code && adminRecord.code.toLowerCase().includes(query)) ||
             (adminRecord.nominal && adminRecord.nominal.toString().includes(query))
           );
         case "worker_income":
           const workerIncomeRecord = record as WorkerIncome;
           return (
-            workerIncomeRecord.tanggal.toLowerCase().includes(query) ||
-            workerIncomeRecord.code.toLowerCase().includes(query) ||
-            workerIncomeRecord.jobdesk.toLowerCase().includes(query) ||
-            workerIncomeRecord.worker.toLowerCase().includes(query) ||
+            (workerIncomeRecord.tanggal && workerIncomeRecord.tanggal.toLowerCase().includes(query)) ||
+            (workerIncomeRecord.code && workerIncomeRecord.code.toLowerCase().includes(query)) ||
+            (workerIncomeRecord.jobdesk && workerIncomeRecord.jobdesk.toLowerCase().includes(query)) ||
+            (workerIncomeRecord.worker && workerIncomeRecord.worker.toLowerCase().includes(query)) ||
             (workerIncomeRecord.fee && workerIncomeRecord.fee.toString().includes(query))
           );
         case "expenses":
           const expenseRecord = record as Expense;
           return (
-            expenseRecord.tanggal.toLowerCase().includes(query) ||
+            (expenseRecord.tanggal && expenseRecord.tanggal.toLowerCase().includes(query)) ||
             (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
             (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
           );
         case "workers":
           const dataWorkerRecord = record as Worker;
           return (
-            dataWorkerRecord.nama.toLowerCase().includes(query) ||
+            (dataWorkerRecord.nama && dataWorkerRecord.nama.toLowerCase().includes(query)) ||
             (dataWorkerRecord.rekening && dataWorkerRecord.rekening.toLowerCase().includes(query)) ||
             (dataWorkerRecord.nomor_wa && dataWorkerRecord.nomor_wa.toLowerCase().includes(query)) ||
             (dataWorkerRecord.role && dataWorkerRecord.role.toLowerCase().includes(query)) ||
-            dataWorkerRecord.status.toLowerCase().includes(query)
+            (dataWorkerRecord.status && dataWorkerRecord.status.toLowerCase().includes(query))
           );
         default:
           return false;
