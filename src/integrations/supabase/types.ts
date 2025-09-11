@@ -80,6 +80,39 @@ export type Database = {
         }
         Relationships: []
       }
+      report: {
+        Row: {
+          created_at: string
+          daily_omset: number
+          id: string
+          tanggal: string
+          total_admin_income: number
+          total_expenses: number
+          total_worker_income: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_omset?: number
+          id?: string
+          tanggal: string
+          total_admin_income?: number
+          total_expenses?: number
+          total_worker_income?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_omset?: number
+          id?: string
+          tanggal?: string
+          total_admin_income?: number
+          total_expenses?: number
+          total_worker_income?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
