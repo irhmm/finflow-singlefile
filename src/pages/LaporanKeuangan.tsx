@@ -475,8 +475,12 @@ export default function LaporanKeuangan() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {monthlyData.length > 0 ? (
-                        monthlyData.map((data, index) => (
+                      {monthlyData.filter(data => 
+                        data.adminIncome > 0 || data.workerIncome > 0 || data.expenses > 0
+                      ).length > 0 ? (
+                        monthlyData.filter(data => 
+                          data.adminIncome > 0 || data.workerIncome > 0 || data.expenses > 0
+                        ).map((data, index) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{data.month}</TableCell>
                             <TableCell className="text-right text-green-600">
