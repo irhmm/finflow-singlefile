@@ -98,31 +98,31 @@ export function DataTable({
       case "admin_income":
         return (
           <>
-            <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Tanggal</TableHead>
-            <TableHead className="font-bold text-foreground w-[150px] px-4 py-3">Code</TableHead>
-            <TableHead className="font-bold text-foreground text-right w-[150px] px-4 py-3">Nominal</TableHead>
-            {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Tanggal</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Code</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-right">Nominal</TableHead>
+            {!isReadOnly && <TableHead className="font-bold text-foreground px-8 py-4 text-center border-l border-border/20">Aksi</TableHead>}
           </>
         );
       case "expenses":
         return (
           <>
-            <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Tanggal</TableHead>
-            <TableHead className="font-bold text-foreground w-[200px] px-4 py-3">Keterangan</TableHead>
-            <TableHead className="font-bold text-foreground text-right w-[150px] px-4 py-3">Nominal</TableHead>
-            {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Tanggal</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Keterangan</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-right">Nominal</TableHead>
+            {!isReadOnly && <TableHead className="font-bold text-foreground px-8 py-4 text-center border-l border-border/20">Aksi</TableHead>}
           </>
         );
       case "workers":
         return (
           <>
-            <TableHead className="font-bold text-foreground w-[80px] px-4 py-3">No</TableHead>
-            <TableHead className="font-bold text-foreground w-[180px] px-4 py-3">Nama</TableHead>
-            <TableHead className="font-bold text-foreground w-[150px] px-4 py-3">Rekening</TableHead>
-            <TableHead className="font-bold text-foreground w-[130px] px-4 py-3">Nomor WA</TableHead>
-            <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Role</TableHead>
-            <TableHead className="font-bold text-foreground w-[100px] px-4 py-3">Status</TableHead>
-            {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
+            <TableHead className="font-bold text-foreground px-6 py-4 text-center">No</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Nama</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Rekening</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Nomor WA</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Role</TableHead>
+            <TableHead className="font-bold text-foreground px-6 py-4 text-center">Status</TableHead>
+            {!isReadOnly && <TableHead className="font-bold text-foreground px-8 py-4 text-center border-l border-border/20">Aksi</TableHead>}
           </>
         );
     }
@@ -130,13 +130,13 @@ export function DataTable({
 
   const renderTableRow = (record: DataRecord) => {
     const commonActions = !isReadOnly ? (
-      <TableCell className="px-4 py-3 text-center border-l border-border/30">
-        <div className="flex gap-2 justify-center">
+      <TableCell className="px-8 py-4 text-center border-l border-border/20">
+        <div className="flex gap-3 justify-center">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onEdit?.(record)}
-            className="h-8 w-8 p-0 hover:bg-[#3b82f6]/10 hover:border-[#3b82f6] hover:text-[#3b82f6] transition-all duration-200"
+            className="h-9 w-9 p-0 hover:bg-[#3b82f6]/10 hover:border-[#3b82f6]/50 hover:text-[#3b82f6] transition-all duration-200 rounded-lg"
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -144,7 +144,7 @@ export function DataTable({
             variant="outline"
             size="sm"
             onClick={() => onDelete?.(record)}
-            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-all duration-200"
+            className="h-9 w-9 p-0 hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive transition-all duration-200 rounded-lg"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -156,10 +156,10 @@ export function DataTable({
       case "admin_income":
         const adminRecord = record as AdminIncome;
         return (
-          <TableRow key={adminRecord.id} className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/30">
-            <TableCell className="px-4 py-3 border-r border-border/30">{formatDate(adminRecord.tanggal)}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30">{adminRecord.code || "-"}</TableCell>
-            <TableCell className="px-4 py-3 text-right font-semibold text-[#3b82f6] border-r border-border/30">{formatCurrency(adminRecord.nominal)}</TableCell>
+          <TableRow key={adminRecord.id} className="hover:bg-muted/40 transition-colors duration-200 border-b border-border/10">
+            <TableCell className="px-6 py-4 border-r border-border/10 font-medium">{formatDate(adminRecord.tanggal)}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10">{adminRecord.code || "-"}</TableCell>
+            <TableCell className="px-6 py-4 text-right font-semibold text-[#3b82f6] border-r border-border/10">{formatCurrency(adminRecord.nominal)}</TableCell>
             {commonActions}
           </TableRow>
         );
@@ -167,10 +167,10 @@ export function DataTable({
       case "expenses":
         const expenseRecord = record as Expense;
         return (
-          <TableRow key={expenseRecord.id} className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/30">
-            <TableCell className="px-4 py-3 border-r border-border/30">{formatDate(expenseRecord.tanggal)}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30">{expenseRecord.keterangan || "-"}</TableCell>
-            <TableCell className="px-4 py-3 text-right font-semibold text-[#3b82f6] border-r border-border/30">{formatCurrency(expenseRecord.nominal)}</TableCell>
+          <TableRow key={expenseRecord.id} className="hover:bg-muted/40 transition-colors duration-200 border-b border-border/10">
+            <TableCell className="px-6 py-4 border-r border-border/10 font-medium">{formatDate(expenseRecord.tanggal)}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10">{expenseRecord.keterangan || "-"}</TableCell>
+            <TableCell className="px-6 py-4 text-right font-semibold text-[#3b82f6] border-r border-border/10">{formatCurrency(expenseRecord.nominal)}</TableCell>
             {commonActions}
           </TableRow>
         );
@@ -178,17 +178,17 @@ export function DataTable({
       case "workers":
         const workerRecord = record as Worker;
         return (
-          <TableRow key={workerRecord.id} className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/30">
-            <TableCell className="px-4 py-3 border-r border-border/30 text-center font-medium">{workerRecord.id}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30 font-medium">{workerRecord.nama}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30">{workerRecord.rekening || "-"}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30">{workerRecord.nomor_wa || "-"}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30">{workerRecord.role || "-"}</TableCell>
-            <TableCell className="px-4 py-3 border-r border-border/30">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+          <TableRow key={workerRecord.id} className="hover:bg-muted/40 transition-colors duration-200 border-b border-border/10">
+            <TableCell className="px-6 py-4 border-r border-border/10 text-center font-medium text-muted-foreground">{workerRecord.id}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10 font-semibold">{workerRecord.nama}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10 font-mono text-sm">{workerRecord.rekening || "-"}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10">{workerRecord.nomor_wa || "-"}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10">{workerRecord.role || "-"}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10 text-center">
+              <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border ${
                 workerRecord.status === 'aktif' 
-                  ? 'bg-green-100 text-green-800 border border-green-200' 
-                  : 'bg-red-100 text-red-800 border border-red-200'
+                  ? 'bg-green-50 text-green-700 border-green-200' 
+                  : 'bg-red-50 text-red-700 border-red-200'
               }`}>
                 {workerRecord.status}
               </span>
@@ -204,17 +204,19 @@ export function DataTable({
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 border-b-2 border-border/50">
-              {renderTableHeaders()}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map(renderTableRow)}
-          </TableBody>
-        </Table>
+      <Card className="overflow-hidden border border-border/30 shadow-lg rounded-xl">
+        <div className="overflow-x-auto">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow className="bg-muted/60 border-b-2 border-border/30 hover:bg-muted/60">
+                {renderTableHeaders()}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map(renderTableRow)}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
 
       {/* Pagination */}
