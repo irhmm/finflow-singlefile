@@ -11,6 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface DataTableProps {
   data: DataRecord[];
@@ -19,9 +27,24 @@ interface DataTableProps {
   onEdit?: (record: DataRecord) => void;
   onDelete?: (record: DataRecord) => void;
   isReadOnly?: boolean;
+  totalItems?: number;
+  currentPage?: number;
+  itemsPerPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export function DataTable({ data, tableType, loading, onEdit, onDelete, isReadOnly = false }: DataTableProps) {
+export function DataTable({ 
+  data, 
+  tableType, 
+  loading, 
+  onEdit, 
+  onDelete, 
+  isReadOnly = false,
+  totalItems = 0,
+  currentPage = 1,
+  itemsPerPage = 10,
+  onPageChange
+}: DataTableProps) {
   // Use special component for worker_income table
   if (tableType === "worker_income") {
     return (
@@ -31,6 +54,10 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete, isReadOn
         onEdit={onEdit as ((record: WorkerIncome) => void) | undefined}
         onDelete={onDelete as ((record: WorkerIncome) => void) | undefined}
         isReadOnly={isReadOnly}
+        totalItems={totalItems}
+        currentPage={currentPage}
+        itemsPerPage={itemsPerPage}
+        onPageChange={onPageChange}
       />
     );
   }
@@ -169,18 +196,92 @@ export function DataTable({ data, tableType, loading, onEdit, onDelete, isReadOn
     }
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
   return (
-    <Card>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {renderTableHeaders()}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map(renderTableRow)}
-        </TableBody>
-      </Table>
-    </Card>
+    <div className="space-y-4">
+      {/* Pagination Info */}
+      {totalItems > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Menampilkan {startIndex + 1} hingga {endIndex} dari {totalItems} data
+        </div>
+      )}
+      
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {renderTableHeaders()}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map(renderTableRow)}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Pagination */}
+      {totalItems > itemsPerPage && onPageChange && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) onPageChange(currentPage - 1);
+                }}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            
+            {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
+              .filter(page => {
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                return false;
+              })
+              .map((page, index, array) => {
+                const prevPage = array[index - 1];
+                const showEllipsis = prevPage && page - prevPage > 1;
+                
+                return (
+                  <PaginationItem key={page}>
+                    {showEllipsis && (
+                      <span className="px-3 py-2 text-muted-foreground">...</span>
+                    )}
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onPageChange(page);
+                      }}
+                      isActive={currentPage === page}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+            
+            <PaginationItem>
+              <PaginationNext 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < Math.ceil(totalItems / itemsPerPage)) {
+                    onPageChange(currentPage + 1);
+                  }
+                }}
+                className={currentPage >= Math.ceil(totalItems / itemsPerPage) ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+    </div>
   );
 }

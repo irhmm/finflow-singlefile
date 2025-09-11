@@ -12,6 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface WorkerIncomeTableProps {
   data: WorkerIncome[];
@@ -19,6 +27,10 @@ interface WorkerIncomeTableProps {
   onEdit?: (record: WorkerIncome) => void;
   onDelete?: (record: WorkerIncome) => void;
   isReadOnly?: boolean;
+  totalItems?: number;
+  currentPage?: number;
+  itemsPerPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function WorkerIncomeTable({ 
@@ -26,7 +38,11 @@ export function WorkerIncomeTable({
   loading, 
   onEdit, 
   onDelete, 
-  isReadOnly = false 
+  isReadOnly = false,
+  totalItems = 0,
+  currentPage = 1,
+  itemsPerPage = 10,
+  onPageChange
 }: WorkerIncomeTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -165,8 +181,19 @@ export function WorkerIncomeTable({
   const dailyGroups = groupByDay(data);
   const monthlyGroups = groupByMonth(data);
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
   return (
-    <Tabs defaultValue="daily" className="space-y-4">
+    <div className="space-y-4">
+      {/* Pagination Info */}
+      {totalItems > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Menampilkan {startIndex + 1} hingga {endIndex} dari {totalItems} data
+        </div>
+      )}
+      
+      <Tabs defaultValue="daily" className="space-y-4">
       <div className="flex items-center justify-between">
         <TabsList className="bg-muted/50 border border-border/50">
           <TabsTrigger value="daily" className="gap-2">
@@ -280,5 +307,68 @@ export function WorkerIncomeTable({
           })}
       </TabsContent>
     </Tabs>
+
+    {/* Pagination */}
+    {totalItems > itemsPerPage && onPageChange && (
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (currentPage > 1) onPageChange(currentPage - 1);
+              }}
+              className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+          
+          {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
+            .filter(page => {
+              const totalPages = Math.ceil(totalItems / itemsPerPage);
+              if (totalPages <= 7) return true;
+              if (page === 1 || page === totalPages) return true;
+              if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+              return false;
+            })
+            .map((page, index, array) => {
+              const prevPage = array[index - 1];
+              const showEllipsis = prevPage && page - prevPage > 1;
+              
+              return (
+                <PaginationItem key={page}>
+                  {showEllipsis && (
+                    <span className="px-3 py-2 text-muted-foreground">...</span>
+                  )}
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onPageChange(page);
+                    }}
+                    isActive={currentPage === page}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
+          
+          <PaginationItem>
+            <PaginationNext 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (currentPage < Math.ceil(totalItems / itemsPerPage)) {
+                  onPageChange(currentPage + 1);
+                }
+              }}
+              className={currentPage >= Math.ceil(totalItems / itemsPerPage) ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    )}
+    </div>
   );
 }

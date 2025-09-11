@@ -98,6 +98,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null);
@@ -203,7 +205,24 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   // Reset search when table changes
   useEffect(() => {
     setSearchQuery("");
+    setCurrentPage(1);
   }, [activeTable]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Calculate pagination data
+  const totalItems = filteredData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredData.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleCreate = () => {
     setEditingRecord(null);
@@ -359,12 +378,16 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             )}
 
         <DataTable
-          data={filteredData}
+          data={currentData}
           tableType={activeTable}
           loading={loading}
           onEdit={canEdit ? handleEdit : undefined}
           onDelete={canEdit ? handleDelete : undefined}
           isReadOnly={!canEdit}
+          totalItems={totalItems}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
         />
 
           </div>
