@@ -1,5 +1,6 @@
 import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker } from "./FinancialDashboard";
 import { WorkerIncomeTable } from "./WorkerIncomeTable";
+import { TableFilters, FilterOptions } from "./TableFilters";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
@@ -31,6 +32,11 @@ interface DataTableProps {
   currentPage?: number;
   itemsPerPage?: number;
   onPageChange?: (page: number) => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  filters?: FilterOptions;
+  onFiltersChange?: (filters: FilterOptions) => void;
+  filteredData?: DataRecord[];
 }
 
 export function DataTable({ 
@@ -43,7 +49,12 @@ export function DataTable({
   totalItems = 0,
   currentPage = 1,
   itemsPerPage = 15,
-  onPageChange
+  onPageChange,
+  searchQuery = "",
+  onSearchChange,
+  filters = { searchQuery: "", selectedCode: "", selectedWorker: "", selectedMonth: "" },
+  onFiltersChange,
+  filteredData = []
 }: DataTableProps) {
   // Use special component for worker_income table
   if (tableType === "worker_income") {
@@ -58,6 +69,11 @@ export function DataTable({
         currentPage={currentPage}
         itemsPerPage={itemsPerPage}
         onPageChange={onPageChange}
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        filteredData={filteredData as WorkerIncome[]}
       />
     );
   }
@@ -199,11 +215,54 @@ export function DataTable({
     }
   };
 
+  // Prepare filter data
+  const getAvailableCodes = () => {
+    return Array.from(new Set(
+      data.map((record) => {
+        if (tableType === "admin_income") return (record as AdminIncome).code;
+        return "";
+      }).filter(Boolean)
+    )).sort();
+  };
+
+  const getAvailableMonths = () => {
+    const months = Array.from(new Set(
+      data.map((record) => {
+        const date = new Date((record as any).tanggal);
+        return `${date.getFullYear()}-${date.getMonth()}`;
+      })
+    )).sort().reverse();
+
+    return months.map(monthYear => {
+      const [year, month] = monthYear.split('-');
+      const date = new Date(parseInt(year), parseInt(month));
+      return {
+        value: monthYear,
+        label: date.toLocaleDateString("id-ID", { month: 'long', year: 'numeric' })
+      };
+    });
+  };
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      {onSearchChange && onFiltersChange && (
+        <TableFilters
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          availableCodes={getAvailableCodes()}
+          availableWorkers={[]}
+          availableMonths={getAvailableMonths()}
+          exportData={filteredData.length > 0 ? filteredData : data}
+          tableType={tableType as "admin_income" | "worker_income"}
+          className="mb-6"
+        />
+      )}
       <Card className="overflow-hidden border border-border/30 shadow-lg rounded-xl">
         <div className="overflow-x-auto">
           <Table className="w-full">

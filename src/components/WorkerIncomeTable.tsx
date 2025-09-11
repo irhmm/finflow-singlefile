@@ -1,4 +1,5 @@
 import { WorkerIncome } from "./FinancialDashboard";
+import { TableFilters, FilterOptions } from "./TableFilters";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Calendar, Clock } from "lucide-react";
@@ -32,6 +33,11 @@ interface WorkerIncomeTableProps {
   currentPage?: number;
   itemsPerPage?: number;
   onPageChange?: (page: number) => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  filters?: FilterOptions;
+  onFiltersChange?: (filters: FilterOptions) => void;
+  filteredData?: WorkerIncome[];
 }
 
 export function WorkerIncomeTable({ 
@@ -43,7 +49,12 @@ export function WorkerIncomeTable({
   totalItems = 0,
   currentPage = 1,
   itemsPerPage = 15,
-  onPageChange
+  onPageChange,
+  searchQuery = "",
+  onSearchChange,
+  filters = { searchQuery: "", selectedCode: "", selectedWorker: "", selectedMonth: "" },
+  onFiltersChange,
+  filteredData = []
 }: WorkerIncomeTableProps) {
   const { isAdmin } = useAuth();
   const formatDate = (dateString: string) => {
@@ -180,14 +191,57 @@ export function WorkerIncomeTable({
     </TableRow>
   );
 
-  const dailyGroups = groupByDay(data);
-  const monthlyGroups = groupByMonth(data);
+  // Prepare filter data
+  const getAvailableCodes = () => {
+    return Array.from(new Set(data.map(record => record.code).filter(Boolean))).sort();
+  };
+
+  const getAvailableWorkers = () => {
+    return Array.from(new Set(data.map(record => record.worker).filter(Boolean))).sort();
+  };
+
+  const getAvailableMonths = () => {
+    const months = Array.from(new Set(
+      data.map((record) => {
+        const date = new Date(record.tanggal);
+        return `${date.getFullYear()}-${date.getMonth()}`;
+      })
+    )).sort().reverse();
+
+    return months.map(monthYear => {
+      const [year, month] = monthYear.split('-');
+      const date = new Date(parseInt(year), parseInt(month));
+      return {
+        value: monthYear,
+        label: date.toLocaleDateString("id-ID", { month: 'long', year: 'numeric' })
+      };
+    });
+  };
+
+  const displayData = filteredData.length > 0 ? filteredData : data;
+  const dailyGroups = groupByDay(displayData);
+  const monthlyGroups = groupByMonth(displayData);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      {onSearchChange && onFiltersChange && (
+        <TableFilters
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          availableCodes={getAvailableCodes()}
+          availableWorkers={getAvailableWorkers()}
+          availableMonths={getAvailableMonths()}
+          exportData={filteredData.length > 0 ? filteredData : data}
+          tableType="worker_income"
+          className="mb-6"
+        />
+      )}
       <Tabs defaultValue="daily" className="space-y-4">
       <div className="flex items-center justify-between">
         <TabsList className="bg-muted/50 border border-border/50">

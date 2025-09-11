@@ -5,6 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { DataTable } from "./DataTable";
 import { DataModal } from "./DataModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { FilterOptions } from "./TableFilters";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,12 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<FilterOptions>({
+    searchQuery: "",
+    selectedCode: "",
+    selectedWorker: "",
+    selectedMonth: ""
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -153,65 +160,98 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     };
   }, [activeTable]);
 
-  // Search functionality
+  // Advanced filtering functionality
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredData(data);
-      return;
+    let filtered = [...data];
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((record) => {
+        switch (activeTable) {
+          case "admin_income":
+            const adminRecord = record as AdminIncome;
+            return (
+              (adminRecord.tanggal && adminRecord.tanggal.toLowerCase().includes(query)) ||
+              (adminRecord.code && adminRecord.code.toLowerCase().includes(query)) ||
+              (adminRecord.nominal && adminRecord.nominal.toString().includes(query))
+            );
+          case "worker_income":
+            const workerIncomeRecord = record as WorkerIncome;
+            return (
+              (workerIncomeRecord.tanggal && workerIncomeRecord.tanggal.toLowerCase().includes(query)) ||
+              (workerIncomeRecord.code && workerIncomeRecord.code.toLowerCase().includes(query)) ||
+              (workerIncomeRecord.jobdesk && workerIncomeRecord.jobdesk.toLowerCase().includes(query)) ||
+              (workerIncomeRecord.worker && workerIncomeRecord.worker.toLowerCase().includes(query)) ||
+              (workerIncomeRecord.fee && workerIncomeRecord.fee.toString().includes(query))
+            );
+          case "expenses":
+            const expenseRecord = record as Expense;
+            return (
+              (expenseRecord.tanggal && expenseRecord.tanggal.toLowerCase().includes(query)) ||
+              (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
+              (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
+            );
+          case "workers":
+            const dataWorkerRecord = record as Worker;
+            return (
+              (dataWorkerRecord.nama && dataWorkerRecord.nama.toLowerCase().includes(query)) ||
+              (dataWorkerRecord.rekening && dataWorkerRecord.rekening.toLowerCase().includes(query)) ||
+              (dataWorkerRecord.nomor_wa && dataWorkerRecord.nomor_wa.toLowerCase().includes(query)) ||
+              (dataWorkerRecord.role && dataWorkerRecord.role.toLowerCase().includes(query)) ||
+              (dataWorkerRecord.status && dataWorkerRecord.status.toLowerCase().includes(query))
+            );
+          default:
+            return false;
+        }
+      });
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = data.filter((record) => {
-      switch (activeTable) {
-        case "admin_income":
-          const adminRecord = record as AdminIncome;
-          return (
-            (adminRecord.tanggal && adminRecord.tanggal.toLowerCase().includes(query)) ||
-            (adminRecord.code && adminRecord.code.toLowerCase().includes(query)) ||
-            (adminRecord.nominal && adminRecord.nominal.toString().includes(query))
-          );
-        case "worker_income":
-          const workerIncomeRecord = record as WorkerIncome;
-          return (
-            (workerIncomeRecord.tanggal && workerIncomeRecord.tanggal.toLowerCase().includes(query)) ||
-            (workerIncomeRecord.code && workerIncomeRecord.code.toLowerCase().includes(query)) ||
-            (workerIncomeRecord.jobdesk && workerIncomeRecord.jobdesk.toLowerCase().includes(query)) ||
-            (workerIncomeRecord.worker && workerIncomeRecord.worker.toLowerCase().includes(query)) ||
-            (workerIncomeRecord.fee && workerIncomeRecord.fee.toString().includes(query))
-          );
-        case "expenses":
-          const expenseRecord = record as Expense;
-          return (
-            (expenseRecord.tanggal && expenseRecord.tanggal.toLowerCase().includes(query)) ||
-            (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
-            (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
-          );
-        case "workers":
-          const dataWorkerRecord = record as Worker;
-          return (
-            (dataWorkerRecord.nama && dataWorkerRecord.nama.toLowerCase().includes(query)) ||
-            (dataWorkerRecord.rekening && dataWorkerRecord.rekening.toLowerCase().includes(query)) ||
-            (dataWorkerRecord.nomor_wa && dataWorkerRecord.nomor_wa.toLowerCase().includes(query)) ||
-            (dataWorkerRecord.role && dataWorkerRecord.role.toLowerCase().includes(query)) ||
-            (dataWorkerRecord.status && dataWorkerRecord.status.toLowerCase().includes(query))
-          );
-        default:
-          return false;
-      }
-    });
-    setFilteredData(filtered);
-  }, [searchQuery, data, activeTable]);
+    // Apply filters
+    if (filters.selectedCode) {
+      filtered = filtered.filter((record) => {
+        if (activeTable === "admin_income") {
+          return (record as AdminIncome).code === filters.selectedCode;
+        } else if (activeTable === "worker_income") {
+          return (record as WorkerIncome).code === filters.selectedCode;
+        }
+        return true;
+      });
+    }
 
-  // Reset search when table changes
+    if (filters.selectedWorker && activeTable === "worker_income") {
+      filtered = filtered.filter((record) => {
+        return (record as WorkerIncome).worker === filters.selectedWorker;
+      });
+    }
+
+    if (filters.selectedMonth) {
+      filtered = filtered.filter((record) => {
+        const date = new Date((record as any).tanggal);
+        const recordMonthYear = `${date.getFullYear()}-${date.getMonth()}`;
+        return recordMonthYear === filters.selectedMonth;
+      });
+    }
+
+    setFilteredData(filtered);
+  }, [searchQuery, filters, data, activeTable]);
+
+  // Reset search and filters when table changes
   useEffect(() => {
     setSearchQuery("");
+    setFilters({
+      searchQuery: "",
+      selectedCode: "",
+      selectedWorker: "",
+      selectedMonth: ""
+    });
     setCurrentPage(1);
   }, [activeTable]);
 
-  // Reset to first page when search changes
+  // Reset to first page when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, filters]);
 
   // Calculate pagination data
   const totalItems = filteredData.length;
@@ -339,29 +379,12 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               )}
             </div>
 
-            {/* Search Bar */}
-            <Card className="p-6 bg-gradient-to-r from-card to-secondary/5 border-secondary/20 shadow-elegant">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-                <Input
-                  placeholder={`Cari data ${tableLabels[activeTable].toLowerCase()}...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 h-12 bg-background/80 border-secondary/30 focus:border-secondary focus:ring-secondary/20 transition-all duration-300 text-lg"
-                />
-              </div>
-              {searchQuery && (
-                <div className="mt-3 text-sm text-muted-foreground">
-                  Menampilkan {filteredData.length} dari {data.length} data
-                </div>
-              )}
-            </Card>
 
             {/* Hide total for worker_income in public mode */}
             {!(activeTable === "worker_income" && !isAdmin) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
-                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {searchQuery ? "(Hasil Pencarian)" : ""}
+                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {(searchQuery || filters.selectedCode || filters.selectedWorker || filters.selectedMonth) ? "(Hasil Filter)" : ""}
                 </h3>
                 <p className="text-4xl font-bold text-header">
                   {activeTable === "workers" 
@@ -369,7 +392,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
                     : `Rp ${calculateTotal().toLocaleString("id-ID")}`
                   }
                 </p>
-                {searchQuery && (
+                {(searchQuery || filters.selectedCode || filters.selectedWorker || filters.selectedMonth) && (
                   <p className="text-sm text-muted-foreground mt-2">
                     dari {data.length} total data
                   </p>
@@ -388,6 +411,11 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           currentPage={currentPage}
           itemsPerPage={itemsPerPage}
           onPageChange={handlePageChange}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filters={filters}
+          onFiltersChange={setFilters}
+          filteredData={filteredData}
         />
 
           </div>
