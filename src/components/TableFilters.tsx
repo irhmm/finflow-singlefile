@@ -53,7 +53,7 @@ export function TableFilters({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const activeFiltersCount = [
-    filters.selectedCode !== "all" ? filters.selectedCode : "",
+    tableType === "admin_income" && filters.selectedCode !== "all" ? filters.selectedCode : "",
     filters.selectedWorker !== "all" ? filters.selectedWorker : "",
     filters.selectedMonth !== "all" ? filters.selectedMonth : ""
   ].filter(Boolean).length;
@@ -179,26 +179,28 @@ export function TableFilters({
                 </Select>
               </div>
 
-              {/* Code Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Code</label>
-                <Select
-                  value={filters.selectedCode}
-                  onValueChange={(value) => onFiltersChange({ ...filters, selectedCode: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih code" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Code</SelectItem>
-                    {availableCodes.map((code) => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Code Filter - Only for admin_income */}
+              {tableType === "admin_income" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Code</label>
+                  <Select
+                    value={filters.selectedCode}
+                    onValueChange={(value) => onFiltersChange({ ...filters, selectedCode: value })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih code" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Code</SelectItem>
+                      {availableCodes.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Worker Filter - Only for worker_income */}
               {tableType === "worker_income" && (
