@@ -217,25 +217,26 @@ export function DataTable({
 
       {/* Pagination */}
       {totalItems > itemsPerPage && onPageChange && (
-        <div className="flex items-center justify-between bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
-          <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {endIndex} of {totalItems}
-          </div>
-          
-          <Pagination>
-            <PaginationContent className="gap-1">
-              <PaginationItem>
-                <PaginationPrevious 
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage > 1) onPageChange(currentPage - 1);
-                  }}
-                  className={`border border-border/50 hover:bg-muted/50 ${
-                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                  }`}
-                />
-              </PaginationItem>
+        <div className="flex items-center justify-end bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {endIndex} of {totalItems}
+            </div>
+            
+            <Pagination>
+              <PaginationContent className="gap-1">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) onPageChange(currentPage - 1);
+                    }}
+                    className={`border border-border/50 hover:bg-muted/50 ${
+                      currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                    }`}
+                  />
+                </PaginationItem>
               
               {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
                 .filter(page => {
@@ -289,6 +290,7 @@ export function DataTable({
               </PaginationItem>
             </PaginationContent>
           </Pagination>
+          </div>
         </div>
       )}
     </div>
