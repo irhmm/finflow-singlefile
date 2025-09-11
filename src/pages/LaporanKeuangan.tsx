@@ -384,13 +384,40 @@ export default function LaporanKeuangan() {
                           }}
                         />
                         <ChartTooltip
-                          content={<ChartTooltipContent 
-                            formatter={(value) => new Intl.NumberFormat("id-ID", {
-                              style: "currency",
-                              currency: "IDR",
-                              minimumFractionDigits: 0
-                            }).format(value as number)}
-                          />}
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                                  <p className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                    {label} {selectedYear}
+                                  </p>
+                                  <div className="space-y-1">
+                                    {payload.map((entry, index) => (
+                                      <div key={index} className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="w-3 h-3 rounded-full"
+                                            style={{ backgroundColor: entry.color }}
+                                          />
+                                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                                            {entry.name}:
+                                          </span>
+                                        </div>
+                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                          {new Intl.NumberFormat("id-ID", {
+                                            style: "currency",
+                                            currency: "IDR",
+                                            minimumFractionDigits: 0
+                                          }).format(entry.value as number)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                         />
                         <ChartLegend 
                           content={<ChartLegendContent />} 
