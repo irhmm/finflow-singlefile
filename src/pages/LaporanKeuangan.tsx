@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
 interface FinancialSummary {
   totalAdminIncome: number;
@@ -290,6 +292,110 @@ export default function LaporanKeuangan() {
                 );
               })}
             </div>
+
+            {/* Monthly Chart */}
+            <Card className="bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-header">
+                  Grafik Bulanan - {selectedYear}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
+                  </div>
+                ) : (
+                  <ChartContainer
+                    config={{
+                      workerIncome: {
+                        label: "Pendapatan Worker",
+                        color: "hsl(221, 83%, 53%)",
+                      },
+                      adminIncome: {
+                        label: "Pendapatan Admin", 
+                        color: "hsl(142, 76%, 36%)",
+                      },
+                      expenses: {
+                        label: "Pengeluaran",
+                        color: "hsl(0, 84%, 60%)",
+                      },
+                      omset: {
+                        label: "Omset",
+                        color: "hsl(262, 83%, 58%)",
+                      },
+                    }}
+                    className="h-[400px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={monthlyData.map(data => ({
+                          month: data.month.slice(0, 3),
+                          workerIncome: data.workerIncome,
+                          adminIncome: data.adminIncome,
+                          expenses: data.expenses,
+                          omset: data.saldoBersih,
+                        }))}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis 
+                          dataKey="month" 
+                          className="text-sm"
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis 
+                          className="text-sm"
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                        />
+                        <ChartTooltip
+                          content={<ChartTooltipContent 
+                            formatter={(value) => new Intl.NumberFormat("id-ID", {
+                              style: "currency",
+                              currency: "IDR",
+                              minimumFractionDigits: 0
+                            }).format(value as number)}
+                          />}
+                        />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Bar 
+                          dataKey="workerIncome" 
+                          fill="hsl(221, 83%, 53%)"
+                          radius={[2, 2, 0, 0]}
+                          name="Pendapatan Worker"
+                        />
+                        <Bar 
+                          dataKey="adminIncome" 
+                          fill="hsl(142, 76%, 36%)"
+                          radius={[2, 2, 0, 0]}
+                          name="Pendapatan Admin"
+                        />
+                        <Bar 
+                          dataKey="expenses" 
+                          fill="hsl(0, 84%, 60%)"
+                          radius={[2, 2, 0, 0]}
+                          name="Pengeluaran"
+                        />
+                        <Bar 
+                          dataKey="omset" 
+                          fill="hsl(262, 83%, 58%)"
+                          radius={[2, 2, 0, 0]}
+                          name="Omset"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Monthly Breakdown Table */}
             <Card className="bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
