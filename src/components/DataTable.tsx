@@ -219,7 +219,7 @@ export function DataTable({
       {totalItems > itemsPerPage && onPageChange && (
         <div className="flex items-center justify-end bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground text-right">
+            <div className="text-sm text-muted-foreground text-left">
               Showing {startIndex + 1} to {endIndex} of {totalItems}
             </div>
             
