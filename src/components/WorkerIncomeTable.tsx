@@ -121,13 +121,13 @@ export function WorkerIncomeTable({
     if (isReadOnly) return null;
     
     return (
-      <TableCell>
-        <div className="flex gap-1">
+      <TableCell className="px-4 py-3 text-center border-l border-border/30">
+        <div className="flex gap-1 justify-center">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onEdit?.(record)}
-            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all duration-200"
+            className="h-8 w-8 p-0 hover:bg-[#3b82f6]/10 hover:text-[#3b82f6] transition-all duration-200"
           >
             <Edit className="h-3.5 w-3.5" />
           </Button>
@@ -145,32 +145,32 @@ export function WorkerIncomeTable({
   };
 
   const renderWorkerIncomeRow = (record: WorkerIncome, showDate: boolean = true) => (
-    <TableRow key={record.id} className="hover:bg-muted/30 transition-colors duration-200 group">
+    <TableRow key={record.id} className="hover:bg-muted/30 transition-colors duration-200 group border-b border-border/30">
       {showDate && (
-        <TableCell className="font-medium text-muted-foreground">
+        <TableCell className="font-medium text-muted-foreground px-4 py-3 border-r border-border/30">
           {formatDateShort(record.tanggal)}
         </TableCell>
       )}
-      <TableCell>
-        <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+      <TableCell className="px-4 py-3 border-r border-border/30">
+        <Badge variant="secondary" className="bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 border border-[#3b82f6]/20">
           {record.code}
         </Badge>
       </TableCell>
-      <TableCell className="font-medium max-w-[200px]">
+      <TableCell className="font-medium max-w-[200px] px-4 py-3 border-r border-border/30">
         <div className="truncate" title={record.jobdesk}>
           {record.jobdesk}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="px-4 py-3 border-r border-border/30">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-xs font-medium text-primary">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#3b82f6]/20 to-secondary/20 flex items-center justify-center text-xs font-medium text-[#3b82f6]">
             {record.worker && record.worker.length > 0 ? record.worker.charAt(0).toUpperCase() : '?'}
           </div>
           <span className="font-medium">{record.worker || 'Unknown Worker'}</span>
         </div>
       </TableCell>
-      <TableCell className="text-right">
-        <span className="font-semibold text-primary">
+      <TableCell className="text-right px-4 py-3 border-r border-border/30">
+        <span className="font-semibold text-[#3b82f6]">
           {formatCurrency(record.fee)}
         </span>
       </TableCell>
@@ -232,12 +232,12 @@ export function WorkerIncomeTable({
                 
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/30">
-                      <TableHead>Kode</TableHead>
-                      <TableHead>Jobdesk</TableHead>
-                      <TableHead>Worker</TableHead>
-                      <TableHead className="text-right">Fee</TableHead>
-                      {!isReadOnly && <TableHead className="w-[100px] text-center">Aksi</TableHead>}
+                    <TableRow className="bg-muted/50 border-b-2 border-border/50">
+                      <TableHead className="font-bold text-foreground w-[100px] px-4 py-3">Kode</TableHead>
+                      <TableHead className="font-bold text-foreground w-[250px] px-4 py-3">Jobdesk</TableHead>
+                      <TableHead className="font-bold text-foreground w-[180px] px-4 py-3">Worker</TableHead>
+                      <TableHead className="font-bold text-foreground text-right w-[150px] px-4 py-3">Fee</TableHead>
+                      {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -280,13 +280,13 @@ export function WorkerIncomeTable({
                 
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/30">
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Kode</TableHead>
-                      <TableHead>Jobdesk</TableHead>
-                      <TableHead>Worker</TableHead>
-                      <TableHead className="text-right">Fee</TableHead>
-                      {!isReadOnly && <TableHead className="w-[100px] text-center">Aksi</TableHead>}
+                    <TableRow className="bg-muted/50 border-b-2 border-border/50">
+                      <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Tanggal</TableHead>
+                      <TableHead className="font-bold text-foreground w-[100px] px-4 py-3">Kode</TableHead>
+                      <TableHead className="font-bold text-foreground w-[250px] px-4 py-3">Jobdesk</TableHead>
+                      <TableHead className="font-bold text-foreground w-[180px] px-4 py-3">Worker</TableHead>
+                      <TableHead className="font-bold text-foreground text-right w-[150px] px-4 py-3">Fee</TableHead>
+                      {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>

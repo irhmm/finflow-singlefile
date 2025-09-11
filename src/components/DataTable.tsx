@@ -98,31 +98,31 @@ export function DataTable({
       case "admin_income":
         return (
           <>
-            <TableHead>Tanggal</TableHead>
-            <TableHead>Code</TableHead>
-            <TableHead>Nominal</TableHead>
-            {!isReadOnly && <TableHead className="w-[100px]">Aksi</TableHead>}
+            <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Tanggal</TableHead>
+            <TableHead className="font-bold text-foreground w-[150px] px-4 py-3">Code</TableHead>
+            <TableHead className="font-bold text-foreground text-right w-[150px] px-4 py-3">Nominal</TableHead>
+            {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
           </>
         );
       case "expenses":
         return (
           <>
-            <TableHead>Tanggal</TableHead>
-            <TableHead>Keterangan</TableHead>
-            <TableHead>Nominal</TableHead>
-            {!isReadOnly && <TableHead className="w-[100px]">Aksi</TableHead>}
+            <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Tanggal</TableHead>
+            <TableHead className="font-bold text-foreground w-[200px] px-4 py-3">Keterangan</TableHead>
+            <TableHead className="font-bold text-foreground text-right w-[150px] px-4 py-3">Nominal</TableHead>
+            {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
           </>
         );
       case "workers":
         return (
           <>
-            <TableHead>No</TableHead>
-            <TableHead>Nama</TableHead>
-            <TableHead>Rekening</TableHead>
-            <TableHead>Nomor WA</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            {!isReadOnly && <TableHead className="w-[100px]">Aksi</TableHead>}
+            <TableHead className="font-bold text-foreground w-[80px] px-4 py-3">No</TableHead>
+            <TableHead className="font-bold text-foreground w-[180px] px-4 py-3">Nama</TableHead>
+            <TableHead className="font-bold text-foreground w-[150px] px-4 py-3">Rekening</TableHead>
+            <TableHead className="font-bold text-foreground w-[130px] px-4 py-3">Nomor WA</TableHead>
+            <TableHead className="font-bold text-foreground w-[120px] px-4 py-3">Role</TableHead>
+            <TableHead className="font-bold text-foreground w-[100px] px-4 py-3">Status</TableHead>
+            {!isReadOnly && <TableHead className="font-bold text-foreground text-center w-[120px] px-4 py-3">Aksi</TableHead>}
           </>
         );
     }
@@ -130,12 +130,13 @@ export function DataTable({
 
   const renderTableRow = (record: DataRecord) => {
     const commonActions = !isReadOnly ? (
-      <TableCell>
-        <div className="flex gap-2">
+      <TableCell className="px-4 py-3 text-center border-l border-border/30">
+        <div className="flex gap-2 justify-center">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onEdit?.(record)}
+            className="h-8 w-8 p-0 hover:bg-[#3b82f6]/10 hover:border-[#3b82f6] hover:text-[#3b82f6] transition-all duration-200"
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -143,6 +144,7 @@ export function DataTable({
             variant="outline"
             size="sm"
             onClick={() => onDelete?.(record)}
+            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:border-destructive hover:text-destructive transition-all duration-200"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -154,10 +156,10 @@ export function DataTable({
       case "admin_income":
         const adminRecord = record as AdminIncome;
         return (
-          <TableRow key={adminRecord.id}>
-            <TableCell>{formatDate(adminRecord.tanggal)}</TableCell>
-            <TableCell>{adminRecord.code || "-"}</TableCell>
-            <TableCell>{formatCurrency(adminRecord.nominal)}</TableCell>
+          <TableRow key={adminRecord.id} className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/30">
+            <TableCell className="px-4 py-3 border-r border-border/30">{formatDate(adminRecord.tanggal)}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30">{adminRecord.code || "-"}</TableCell>
+            <TableCell className="px-4 py-3 text-right font-semibold text-[#3b82f6] border-r border-border/30">{formatCurrency(adminRecord.nominal)}</TableCell>
             {commonActions}
           </TableRow>
         );
@@ -165,10 +167,10 @@ export function DataTable({
       case "expenses":
         const expenseRecord = record as Expense;
         return (
-          <TableRow key={expenseRecord.id}>
-            <TableCell>{formatDate(expenseRecord.tanggal)}</TableCell>
-            <TableCell>{expenseRecord.keterangan || "-"}</TableCell>
-            <TableCell>{formatCurrency(expenseRecord.nominal)}</TableCell>
+          <TableRow key={expenseRecord.id} className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/30">
+            <TableCell className="px-4 py-3 border-r border-border/30">{formatDate(expenseRecord.tanggal)}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30">{expenseRecord.keterangan || "-"}</TableCell>
+            <TableCell className="px-4 py-3 text-right font-semibold text-[#3b82f6] border-r border-border/30">{formatCurrency(expenseRecord.nominal)}</TableCell>
             {commonActions}
           </TableRow>
         );
@@ -176,17 +178,17 @@ export function DataTable({
       case "workers":
         const workerRecord = record as Worker;
         return (
-          <TableRow key={workerRecord.id}>
-            <TableCell>{workerRecord.id}</TableCell>
-            <TableCell>{workerRecord.nama}</TableCell>
-            <TableCell>{workerRecord.rekening || "-"}</TableCell>
-            <TableCell>{workerRecord.nomor_wa || "-"}</TableCell>
-            <TableCell>{workerRecord.role || "-"}</TableCell>
-            <TableCell>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          <TableRow key={workerRecord.id} className="hover:bg-muted/30 transition-colors duration-200 border-b border-border/30">
+            <TableCell className="px-4 py-3 border-r border-border/30 text-center font-medium">{workerRecord.id}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30 font-medium">{workerRecord.nama}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30">{workerRecord.rekening || "-"}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30">{workerRecord.nomor_wa || "-"}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30">{workerRecord.role || "-"}</TableCell>
+            <TableCell className="px-4 py-3 border-r border-border/30">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                 workerRecord.status === 'aktif' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
+                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                  : 'bg-red-100 text-red-800 border border-red-200'
               }`}>
                 {workerRecord.status}
               </span>
@@ -205,7 +207,7 @@ export function DataTable({
       <Card className="overflow-hidden border border-border/50 shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30">
+            <TableRow className="bg-muted/50 border-b-2 border-border/50">
               {renderTableHeaders()}
             </TableRow>
           </TableHeader>
