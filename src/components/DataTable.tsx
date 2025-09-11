@@ -217,14 +217,13 @@ export function DataTable({
 
       {/* Pagination */}
       {totalItems > itemsPerPage && onPageChange && (
-        <div className="flex items-center justify-end bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground text-left">
-              Showing {startIndex + 1} to {endIndex} of {totalItems}
-            </div>
-            
-            <Pagination>
-              <PaginationContent className="gap-1">
+        <div className="flex items-center justify-between bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {endIndex} of {totalItems}
+          </div>
+          
+          <Pagination>
+            <PaginationContent className="gap-1">
                 <PaginationItem>
                   <PaginationPrevious 
                     href="#"
@@ -290,7 +289,6 @@ export function DataTable({
               </PaginationItem>
             </PaginationContent>
           </Pagination>
-          </div>
         </div>
       )}
     </div>
