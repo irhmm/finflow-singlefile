@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Calendar, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Table,
   TableBody,
@@ -44,6 +45,7 @@ export function WorkerIncomeTable({
   itemsPerPage = 15,
   onPageChange
 }: WorkerIncomeTableProps) {
+  const { isAdmin } = useAuth();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
       day: '2-digit',
@@ -219,14 +221,16 @@ export function WorkerIncomeTable({
                         {records.length} transaksi
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
-                        {formatCurrency(dayTotal)}
+                    {isAdmin && (
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">
+                          {formatCurrency(dayTotal)}
+                        </div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-wider">
+                          Total Hari Ini
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Total Hari Ini
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
                 
@@ -269,14 +273,16 @@ export function WorkerIncomeTable({
                         {records.length} transaksi total
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-secondary">
-                        {formatCurrency(monthTotal)}
+                    {isAdmin && (
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-secondary">
+                          {formatCurrency(monthTotal)}
+                        </div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-wider">
+                          Total Bulan
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Total Bulan
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
                 
