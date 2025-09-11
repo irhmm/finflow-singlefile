@@ -52,7 +52,7 @@ export function DataTable({
   onPageChange,
   searchQuery = "",
   onSearchChange,
-  filters = { searchQuery: "", selectedCode: "all", selectedWorker: "all", selectedMonth: "all" },
+  filters = { searchQuery: "", selectedCode: "all", selectedWorker: "all", selectedMonth: "all", selectedRole: "all", selectedStatus: "all" },
   onFiltersChange,
   filteredData = []
 }: DataTableProps) {

@@ -103,7 +103,9 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     searchQuery: "",
     selectedCode: "all",
     selectedWorker: "all",
-    selectedMonth: "all"
+    selectedMonth: "all",
+    selectedRole: "all",
+    selectedStatus: "all"
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
@@ -243,7 +245,9 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       searchQuery: "",
       selectedCode: "all",
       selectedWorker: "all",
-      selectedMonth: "all"
+      selectedMonth: "all",
+      selectedRole: "all",
+      selectedStatus: "all"
     });
     setCurrentPage(1);
   }, [activeTable]);
