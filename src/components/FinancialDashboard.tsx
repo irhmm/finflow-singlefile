@@ -101,9 +101,9 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterOptions>({
     searchQuery: "",
-    selectedCode: "",
-    selectedWorker: "",
-    selectedMonth: ""
+    selectedCode: "all",
+    selectedWorker: "all",
+    selectedMonth: "all"
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
@@ -208,7 +208,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     }
 
     // Apply filters
-    if (filters.selectedCode) {
+    if (filters.selectedCode && filters.selectedCode !== "all") {
       filtered = filtered.filter((record) => {
         if (activeTable === "admin_income") {
           return (record as AdminIncome).code === filters.selectedCode;
@@ -219,13 +219,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       });
     }
 
-    if (filters.selectedWorker && activeTable === "worker_income") {
+    if (filters.selectedWorker && filters.selectedWorker !== "all" && activeTable === "worker_income") {
       filtered = filtered.filter((record) => {
         return (record as WorkerIncome).worker === filters.selectedWorker;
       });
     }
 
-    if (filters.selectedMonth) {
+    if (filters.selectedMonth && filters.selectedMonth !== "all") {
       filtered = filtered.filter((record) => {
         const date = new Date((record as any).tanggal);
         const recordMonthYear = `${date.getFullYear()}-${date.getMonth()}`;
@@ -241,9 +241,9 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     setSearchQuery("");
     setFilters({
       searchQuery: "",
-      selectedCode: "",
-      selectedWorker: "",
-      selectedMonth: ""
+      selectedCode: "all",
+      selectedWorker: "all",
+      selectedMonth: "all"
     });
     setCurrentPage(1);
   }, [activeTable]);
@@ -384,7 +384,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             {!(activeTable === "worker_income" && !isAdmin) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
-                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {(searchQuery || filters.selectedCode || filters.selectedWorker || filters.selectedMonth) ? "(Hasil Filter)" : ""}
+                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {(searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all")) ? "(Hasil Filter)" : ""}
                 </h3>
                 <p className="text-4xl font-bold text-header">
                   {activeTable === "workers" 
@@ -392,7 +392,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
                     : `Rp ${calculateTotal().toLocaleString("id-ID")}`
                   }
                 </p>
-                {(searchQuery || filters.selectedCode || filters.selectedWorker || filters.selectedMonth) && (
+                {(searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all")) && (
                   <p className="text-sm text-muted-foreground mt-2">
                     dari {data.length} total data
                   </p>

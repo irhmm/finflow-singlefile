@@ -53,17 +53,17 @@ export function TableFilters({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const activeFiltersCount = [
-    filters.selectedCode,
-    filters.selectedWorker,
-    filters.selectedMonth
+    filters.selectedCode !== "all" ? filters.selectedCode : "",
+    filters.selectedWorker !== "all" ? filters.selectedWorker : "",
+    filters.selectedMonth !== "all" ? filters.selectedMonth : ""
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
     onFiltersChange({
       searchQuery: "",
-      selectedCode: "",
-      selectedWorker: "",
-      selectedMonth: ""
+      selectedCode: "all",
+      selectedWorker: "all",
+      selectedMonth: "all"
     });
     onSearchChange("");
   };
@@ -169,7 +169,7 @@ export function TableFilters({
                     <SelectValue placeholder="Pilih bulan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Bulan</SelectItem>
+                    <SelectItem value="all">Semua Bulan</SelectItem>
                     {availableMonths.map((month) => (
                       <SelectItem key={month.value} value={month.value}>
                         {month.label}
@@ -190,7 +190,7 @@ export function TableFilters({
                     <SelectValue placeholder="Pilih code" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Code</SelectItem>
+                    <SelectItem value="all">Semua Code</SelectItem>
                     {availableCodes.map((code) => (
                       <SelectItem key={code} value={code}>
                         {code}
@@ -212,7 +212,7 @@ export function TableFilters({
                       <SelectValue placeholder="Pilih worker" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua Worker</SelectItem>
+                      <SelectItem value="all">Semua Worker</SelectItem>
                       {availableWorkers.map((worker) => (
                         <SelectItem key={worker} value={worker}>
                           {worker}

@@ -52,7 +52,7 @@ export function WorkerIncomeTable({
   onPageChange,
   searchQuery = "",
   onSearchChange,
-  filters = { searchQuery: "", selectedCode: "", selectedWorker: "", selectedMonth: "" },
+  filters = { searchQuery: "", selectedCode: "all", selectedWorker: "all", selectedMonth: "all" },
   onFiltersChange,
   filteredData = []
 }: WorkerIncomeTableProps) {
