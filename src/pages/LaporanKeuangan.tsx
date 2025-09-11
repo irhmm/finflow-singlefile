@@ -150,12 +150,8 @@ export default function LaporanKeuangan() {
         data.saldoBersih = data.adminIncome + data.workerIncome - data.expenses;
       });
 
-      // Filter out months with no data
-      const filteredMonthly = Object.values(monthlyBreakdown).filter(data => 
-        data.adminIncome > 0 || data.workerIncome > 0 || data.expenses > 0
-      );
-
-      setMonthlyData(filteredMonthly);
+      // Always show all 12 months (don't filter out months with no data)
+      setMonthlyData(Object.values(monthlyBreakdown));
     } catch (error) {
       console.error("Error loading financial data:", error);
       toast({
@@ -361,7 +357,8 @@ export default function LaporanKeuangan() {
                           left: 40,
                           bottom: 5,
                         }}
-                        maxBarSize={40}
+                        maxBarSize={35}
+                        barCategoryGap="15%"
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                         <XAxis 
