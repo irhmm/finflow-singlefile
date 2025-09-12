@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/AuthForm';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
@@ -28,13 +29,37 @@ function AppContent() {
     <BrowserRouter>
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
-          <Route path="/" element={<Index />} />
           <Route path="/admin-login" element={<AuthForm onSuccess={() => window.location.href = "/"} />} />
-          <Route path="/pendapatan-admin" element={<Index />} />
-          <Route path="/pendapatan-worker" element={<Index />} />
-          <Route path="/pengeluaran" element={<Index />} />
-          <Route path="/laporan-keuangan" element={<LaporanKeuangan />} />
-          <Route path="/rekap-gaji-worker" element={<RekapGajiWorker />} />
+          <Route path="/" element={
+            <ProtectedRoute requireAdmin={true}>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/pendapatan-admin" element={
+            <ProtectedRoute requireAdmin={true}>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/pendapatan-worker" element={
+            <ProtectedRoute requireAdmin={true}>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/pengeluaran" element={
+            <ProtectedRoute requireAdmin={true}>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/laporan-keuangan" element={
+            <ProtectedRoute requireAdmin={true}>
+              <LaporanKeuangan />
+            </ProtectedRoute>
+          } />
+          <Route path="/rekap-gaji-worker" element={
+            <ProtectedRoute requireAdmin={true}>
+              <RekapGajiWorker />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
 }
 
 serve(async (req) => {
@@ -13,6 +13,37 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: Validate API key
+    const providedApiKey = req.headers.get('x-api-key') || new URL(req.url).searchParams.get('api_key')
+    const expectedApiKey = Deno.env.get('N8N_WEBHOOK_API_KEY')
+    
+    if (!expectedApiKey) {
+      console.error('N8N_WEBHOOK_API_KEY not configured')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Webhook not properly configured' 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+    
+    if (!providedApiKey || providedApiKey !== expectedApiKey) {
+      console.error('Invalid or missing API key')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Unauthorized - Invalid API key' 
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
