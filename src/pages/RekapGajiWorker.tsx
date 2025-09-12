@@ -10,12 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wallet, TrendingUp, Calculator } from "lucide-react";
+import { Plus, Wallet, TrendingUp, Calculator, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface WorkerIncome {
   id: number;
@@ -43,6 +46,7 @@ interface SummaryData {
 export default function RekapGajiWorker() {
   const { user, userRole, loading } = useAuth();
   const [workers, setWorkers] = useState<string[]>([]);
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "yyyy-MM"));
   const [workerIncomes, setWorkerIncomes] = useState<WorkerIncome[]>([]);
@@ -52,6 +56,8 @@ export default function RekapGajiWorker() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [incomeCurrentPage, setIncomeCurrentPage] = useState(1);
   const [withdrawalCurrentPage, setWithdrawalCurrentPage] = useState(1);
+  const [workerComboboxOpen, setWorkerComboboxOpen] = useState(false);
+  const [monthComboboxOpen, setMonthComboboxOpen] = useState(false);
   const itemsPerPage = 15;
 
   // Form state
@@ -63,6 +69,7 @@ export default function RekapGajiWorker() {
 
   useEffect(() => {
     fetchWorkers();
+    fetchAvailableMonths();
   }, []);
 
   useEffect(() => {
@@ -85,6 +92,41 @@ export default function RekapGajiWorker() {
     } catch (error) {
       console.error("Error fetching workers:", error);
       toast.error("Gagal mengambil data worker");
+    }
+  };
+
+  const fetchAvailableMonths = async () => {
+    try {
+      // Get months from worker_income
+      const { data: incomeData, error: incomeError } = await supabase
+        .from("worker_income")
+        .select("tanggal")
+        .order("tanggal", { ascending: false });
+
+      if (incomeError) throw incomeError;
+
+      // Get months from salary_withdrawals
+      const { data: withdrawalData, error: withdrawalError } = await supabase
+        .from("salary_withdrawals")
+        .select("tanggal")
+        .order("tanggal", { ascending: false });
+
+      if (withdrawalError) throw withdrawalError;
+
+      // Combine and extract unique months
+      const allDates = [
+        ...(incomeData?.map(item => item.tanggal) || []),
+        ...(withdrawalData?.map(item => format(new Date(item.tanggal), "yyyy-MM-dd")) || [])
+      ];
+
+      const uniqueMonths = Array.from(new Set(
+        allDates.map(date => format(new Date(date), "yyyy-MM"))
+      )).sort().reverse();
+
+      setAvailableMonths(uniqueMonths);
+    } catch (error) {
+      console.error("Error fetching available months:", error);
+      toast.error("Gagal mengambil data bulan tersedia");
     }
   };
 
@@ -233,27 +275,92 @@ export default function RekapGajiWorker() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="worker">Pilih Worker</Label>
-                      <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih worker..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {workers.map((worker) => (
-                            <SelectItem key={worker} value={worker}>
-                              {worker}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={workerComboboxOpen} onOpenChange={setWorkerComboboxOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={workerComboboxOpen}
+                            className="w-full justify-between"
+                          >
+                            {selectedWorker || "Pilih worker..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Cari worker..." />
+                            <CommandList>
+                              <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
+                              <CommandGroup>
+                                {workers.map((worker) => (
+                                  <CommandItem
+                                    key={worker}
+                                    value={worker}
+                                    onSelect={(currentValue) => {
+                                      setSelectedWorker(currentValue === selectedWorker ? "" : currentValue);
+                                      setWorkerComboboxOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedWorker === worker ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {worker}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="month">Pilih Bulan</Label>
-                      <Input
-                        type="month"
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                      />
+                      <Popover open={monthComboboxOpen} onOpenChange={setMonthComboboxOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={monthComboboxOpen}
+                            className="w-full justify-between"
+                          >
+                            {selectedMonth ? format(new Date(selectedMonth), "MMMM yyyy", { locale: id }) : "Pilih bulan..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Cari bulan..." />
+                            <CommandList>
+                              <CommandEmpty>Tidak ada bulan ditemukan.</CommandEmpty>
+                              <CommandGroup>
+                                {availableMonths.map((month) => (
+                                  <CommandItem
+                                    key={month}
+                                    value={month}
+                                    onSelect={(currentValue) => {
+                                      setSelectedMonth(currentValue === selectedMonth ? "" : currentValue);
+                                      setMonthComboboxOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedMonth === month ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {format(new Date(month), "MMMM yyyy", { locale: id })}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     <div className="flex items-end">
@@ -271,18 +378,45 @@ export default function RekapGajiWorker() {
                           <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
                               <Label htmlFor="formWorker">Worker</Label>
-                              <Select value={formData.worker} onValueChange={(value) => setFormData(prev => ({ ...prev, worker: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Pilih worker..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {workers.map((worker) => (
-                                    <SelectItem key={worker} value={worker}>
-                                      {worker}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline" 
+                                    role="combobox"
+                                    className="w-full justify-between"
+                                  >
+                                    {formData.worker || "Pilih worker..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Cari worker..." />
+                                    <CommandList>
+                                      <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
+                                      <CommandGroup>
+                                        {workers.map((worker) => (
+                                          <CommandItem
+                                            key={worker}
+                                            value={worker}
+                                            onSelect={(currentValue) => {
+                                              setFormData(prev => ({ ...prev, worker: currentValue }));
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                formData.worker === worker ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            {worker}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                             
                             <div className="space-y-2">
