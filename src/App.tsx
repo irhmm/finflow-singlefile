@@ -9,6 +9,7 @@ import { AuthForm } from '@/components/AuthForm';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
+import RekapGajiWorker from "./pages/RekapGajiWorker";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function AppContent() {
           <Route path="/pendapatan-worker" element={<Index />} />
           <Route path="/pengeluaran" element={<Index />} />
           <Route path="/laporan-keuangan" element={<LaporanKeuangan />} />
+          <Route path="/rekap-gaji-worker" element={<RekapGajiWorker />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -1,4 +1,4 @@
-import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck } from "lucide-react";
+import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck, Wallet } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import {
 import { TableType } from "./FinancialDashboard";
 
 interface AppSidebarProps {
-  activeTable: TableType | "laporan";
+  activeTable: TableType | "laporan" | "rekap_gaji";
   onTableChange: (table: TableType) => void;
 }
 
@@ -54,6 +54,14 @@ const navigationItems = [
     icon: BarChart3,
     table: "laporan" as any,
     path: "/laporan-keuangan",
+    isRoute: true,
+    publicAccess: false
+  },
+  {
+    title: "Rekap Gaji Worker",
+    icon: Wallet,
+    table: "rekap_gaji" as any,
+    path: "/rekap-gaji-worker",
     isRoute: true,
     publicAccess: false
   }

@@ -113,6 +113,30 @@ export type Database = {
         }
         Relationships: []
       }
+      salary_withdrawals: {
+        Row: {
+          amount: number
+          catatan: string | null
+          id: number
+          tanggal: string
+          worker: string
+        }
+        Insert: {
+          amount: number
+          catatan?: string | null
+          id?: number
+          tanggal?: string
+          worker: string
+        }
+        Update: {
+          amount?: number
+          catatan?: string | null
+          id?: number
+          tanggal?: string
+          worker?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
