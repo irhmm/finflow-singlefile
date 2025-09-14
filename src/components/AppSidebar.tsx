@@ -89,9 +89,11 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
     }
     
     if (userRole === 'admin') {
-      // Admin: worker_income and admin_income only
+      // Admin: worker_income, admin_income, and rekap_gaji access
       return navigationItems.filter(item => 
-        item.table === 'worker_income' || item.table === 'admin_income'
+        item.table === 'worker_income' || 
+        item.table === 'admin_income' || 
+        item.table === 'rekap_gaji'
       );
     }
     
