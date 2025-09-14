@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker, SalaryWithdrawal } from "./FinancialDashboard";
+import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker } from "./FinancialDashboard";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +25,7 @@ const tableLabels = {
   admin_income: "Pendapatan Admin",
   worker_income: "Pendapatan Worker",
   expenses: "Pengeluaran",
-  workers: "Data Worker",
-  salary_withdrawals: "Rekap Gaji Worker"
+  workers: "Data Worker"
 };
 
 export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataModalProps) {
@@ -63,14 +62,6 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
             nomor_wa: "", 
             role: "", 
             status: "aktif" 
-          });
-          break;
-        case "salary_withdrawals":
-          setFormData({
-            tanggal: today,
-            worker: "",
-            amount: "",
-            catatan: ""
           });
           break;
       }
@@ -386,68 +377,6 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
                   <option value="aktif">Aktif</option>
                   <option value="non aktif">Non Aktif</option>
                 </select>
-              </div>
-            </div>
-          </>
-        );
-
-      case "salary_withdrawals":
-        return (
-          <>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tanggal" className="text-right">
-                  Tanggal
-                </Label>
-                <Input
-                  id="tanggal"
-                  type="date"
-                  value={formData.tanggal || ""}
-                  onChange={(e) => handleInputChange("tanggal", e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="worker" className="text-right">
-                  Worker
-                </Label>
-                <Input
-                  id="worker"
-                  type="text"
-                  placeholder="Nama worker"
-                  value={formData.worker || ""}
-                  onChange={(e) => handleInputChange("worker", e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">
-                  Amount
-                </Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="0"
-                  value={formData.amount || ""}
-                  onChange={(e) => handleInputChange("amount", e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="catatan" className="text-right">
-                  Catatan
-                </Label>
-                <Input
-                  id="catatan"
-                  type="text"
-                  placeholder="Catatan (opsional)"
-                  value={formData.catatan || ""}
-                  onChange={(e) => handleInputChange("catatan", e.target.value)}
-                  className="col-span-3"
-                />
               </div>
             </div>
           </>

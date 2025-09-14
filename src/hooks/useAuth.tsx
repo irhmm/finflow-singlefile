@@ -9,7 +9,6 @@ interface AuthContextType {
   userRole: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  isPublic: boolean;
   canEdit: boolean;
   signOut: () => Promise<void>;
 }
@@ -23,7 +22,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<string>('user');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [isPublic, setIsPublic] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
 
   const checkUserRole = async (userId: string) => {
@@ -38,13 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserRole(role);
       setIsAdmin(role === 'admin' || role === 'admin_keuangan' || role === 'super_admin');
       setIsSuperAdmin(role === 'super_admin');
-      setIsPublic(role === 'public');
       setCanEdit(role === 'admin_keuangan' || role === 'super_admin');
     } catch (error) {
       setUserRole('user');
       setIsAdmin(false);
       setIsSuperAdmin(false);
-      setIsPublic(false);
       setCanEdit(false);
     }
   };
@@ -63,7 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserRole('user');
           setIsAdmin(false);
           setIsSuperAdmin(false);
-          setIsPublic(false);
           setCanEdit(false);
         }
       }
@@ -90,12 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserRole('user');
     setIsAdmin(false);
     setIsSuperAdmin(false);
-    setIsPublic(false);
     setCanEdit(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, isAdmin, isSuperAdmin, isPublic, canEdit, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, isAdmin, isSuperAdmin, canEdit, signOut }}>
       {children}
     </AuthContext.Provider>
   );

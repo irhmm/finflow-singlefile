@@ -60,16 +60,17 @@ const navigationItems = [
   {
     title: "Rekap Gaji Worker",
     icon: Wallet,
-    table: "salary_withdrawals" as TableType,
-    isRoute: false,
-    publicAccess: true
+    table: "rekap_gaji" as any,
+    path: "/rekap-gaji-worker",
+    isRoute: true,
+    publicAccess: false
   }
 ];
 
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
-  const { signOut, user, userRole, isAdmin, isSuperAdmin, isPublic } = useAuth();
+  const { signOut, user, userRole, isAdmin, isSuperAdmin } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -83,27 +84,16 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   // Filter navigation items based on role permissions
   const getVisibleItems = () => {
     if (!user) {
-      // Anonymous users: worker_income and salary_withdrawals (public access)
-      return navigationItems.filter(item => 
-        item.table === 'worker_income' || 
-        item.table === 'salary_withdrawals'
-      );
-    }
-    
-    if (userRole === 'public') {
-      // Public users: only worker_income and salary_withdrawals (read only)
-      return navigationItems.filter(item => 
-        item.table === 'worker_income' || 
-        item.table === 'salary_withdrawals'
-      );
+      // Anonymous users: only worker_income
+      return navigationItems.filter(item => item.table === 'worker_income');
     }
     
     if (userRole === 'admin') {
-      // Admin: worker_income, admin_income, and salary_withdrawals access
+      // Admin: worker_income, admin_income, and rekap_gaji access
       return navigationItems.filter(item => 
         item.table === 'worker_income' || 
         item.table === 'admin_income' || 
-        item.table === 'salary_withdrawals'
+        item.table === 'rekap_gaji'
       );
     }
     
@@ -114,7 +104,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
         item.table === 'admin_income' || 
         item.table === 'expenses' || 
         item.table === 'workers' || 
-        item.table === 'salary_withdrawals'
+        item.table === 'rekap_gaji'
       );
     }
     
@@ -139,8 +129,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
               <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
                 {userRole === 'super_admin' ? 'Super Admin' : 
                  userRole === 'admin' ? 'Admin' : 
-                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 
-                 userRole === 'public' ? 'Public' : 'User'}
+                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'User'}
               </span>
             )}
           </SidebarGroupLabel>

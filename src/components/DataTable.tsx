@@ -1,4 +1,4 @@
-import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker, SalaryWithdrawal } from "./FinancialDashboard";
+import { TableType, DataRecord, AdminIncome, WorkerIncome, Expense, Worker } from "./FinancialDashboard";
 import { WorkerIncomeTable } from "./WorkerIncomeTable";
 import { TableFilters, FilterOptions } from "./TableFilters";
 import { Card } from "@/components/ui/card";
@@ -141,16 +141,6 @@ export function DataTable({
             {!isReadOnly && <TableHead className="font-bold text-foreground px-8 py-4 text-center border-l border-border/20">Aksi</TableHead>}
           </>
         );
-      case "salary_withdrawals":
-        return (
-          <>
-            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Tanggal</TableHead>
-            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Worker</TableHead>
-            <TableHead className="font-bold text-foreground px-6 py-4 text-right">Amount</TableHead>
-            <TableHead className="font-bold text-foreground px-6 py-4 text-left">Catatan</TableHead>
-            {!isReadOnly && <TableHead className="font-bold text-foreground px-8 py-4 text-center border-l border-border/20">Aksi</TableHead>}
-          </>
-        );
     }
   };
 
@@ -219,18 +209,6 @@ export function DataTable({
                 {workerRecord.status}
               </span>
             </TableCell>
-            {commonActions}
-          </TableRow>
-        );
-
-      case "salary_withdrawals":
-        const salaryRecord = record as SalaryWithdrawal;
-        return (
-          <TableRow key={salaryRecord.id} className="hover:bg-muted/40 transition-colors duration-200 border-b border-border/10">
-            <TableCell className="px-6 py-4 border-r border-border/10 font-medium">{formatDate(salaryRecord.tanggal)}</TableCell>
-            <TableCell className="px-6 py-4 border-r border-border/10 font-semibold">{salaryRecord.worker}</TableCell>
-            <TableCell className="px-6 py-4 text-right font-semibold text-[#3b82f6] border-r border-border/10">{formatCurrency(salaryRecord.amount)}</TableCell>
-            <TableCell className="px-6 py-4 border-r border-border/10">{salaryRecord.catatan || "-"}</TableCell>
             {commonActions}
           </TableRow>
         );
