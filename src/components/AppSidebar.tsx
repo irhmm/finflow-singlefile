@@ -60,17 +60,16 @@ const navigationItems = [
   {
     title: "Rekap Gaji Worker",
     icon: Wallet,
-    table: "rekap_gaji" as any,
-    path: "/rekap-gaji-worker",
-    isRoute: true,
-    publicAccess: false
+    table: "salary_withdrawals" as TableType,
+    isRoute: false,
+    publicAccess: true
   }
 ];
 
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
-  const { signOut, user, userRole, isAdmin, isSuperAdmin } = useAuth();
+  const { signOut, user, userRole, isAdmin, isSuperAdmin, isPublic } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -88,12 +87,20 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
       return navigationItems.filter(item => item.table === 'worker_income');
     }
     
+    if (userRole === 'public') {
+      // Public users: only worker_income and salary_withdrawals (read only)
+      return navigationItems.filter(item => 
+        item.table === 'worker_income' || 
+        item.table === 'salary_withdrawals'
+      );
+    }
+    
     if (userRole === 'admin') {
-      // Admin: worker_income, admin_income, and rekap_gaji access
+      // Admin: worker_income, admin_income, and salary_withdrawals access
       return navigationItems.filter(item => 
         item.table === 'worker_income' || 
         item.table === 'admin_income' || 
-        item.table === 'rekap_gaji'
+        item.table === 'salary_withdrawals'
       );
     }
     
@@ -104,7 +111,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
         item.table === 'admin_income' || 
         item.table === 'expenses' || 
         item.table === 'workers' || 
-        item.table === 'rekap_gaji'
+        item.table === 'salary_withdrawals'
       );
     }
     
@@ -129,7 +136,8 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
               <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
                 {userRole === 'super_admin' ? 'Super Admin' : 
                  userRole === 'admin' ? 'Admin' : 
-                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'User'}
+                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 
+                 userRole === 'public' ? 'Public' : 'User'}
               </span>
             )}
           </SidebarGroupLabel>

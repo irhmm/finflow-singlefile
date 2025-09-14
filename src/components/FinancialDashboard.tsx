@@ -14,7 +14,7 @@ import { Plus, Search, LogIn, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
-export type TableType = "admin_income" | "worker_income" | "expenses" | "workers";
+export type TableType = "admin_income" | "worker_income" | "expenses" | "workers" | "salary_withdrawals";
 
 export interface AdminIncome {
   id: number;
@@ -50,13 +50,22 @@ export interface Worker {
   updated_at?: string;
 }
 
-export type DataRecord = AdminIncome | WorkerIncome | Expense | Worker;
+export interface SalaryWithdrawal {
+  id: number;
+  worker: string;
+  amount: number;
+  tanggal: string;
+  catatan?: string;
+}
+
+export type DataRecord = AdminIncome | WorkerIncome | Expense | Worker | SalaryWithdrawal;
 
 const tableLabels = {
   admin_income: "Pendapatan Admin",
   worker_income: "Pendapatan Worker", 
   expenses: "Pengeluaran",
-  workers: "Data Worker"
+  workers: "Data Worker",
+  salary_withdrawals: "Rekap Gaji Worker"
 };
 
 interface FinancialDashboardProps {
@@ -64,7 +73,7 @@ interface FinancialDashboardProps {
 }
 
 export const FinancialDashboard = ({ initialTable = "worker_income" }: FinancialDashboardProps) => {
-  const { user, userRole, isAdmin, isSuperAdmin, canEdit, signOut } = useAuth();
+  const { user, userRole, isAdmin, isSuperAdmin, isPublic, canEdit, signOut } = useAuth();
   const [activeTable, setActiveTable] = useState<TableType>(initialTable);
 
   // Update active table when URL changes
@@ -80,14 +89,21 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       return;
     }
     
-    if (userRole === 'admin' && tab && !['worker_income', 'admin_income'].includes(tab)) {
-      // Admin: only worker_income and admin_income
+    if (userRole === 'public' && tab && !['worker_income', 'salary_withdrawals'].includes(tab)) {
+      // Public users: only worker_income and salary_withdrawals
       window.history.replaceState({}, '', '/?tab=worker_income');
       setActiveTable('worker_income');
       return;
     }
     
-    if (tab && ['admin_income', 'worker_income', 'expenses', 'workers'].includes(tab)) {
+    if (userRole === 'admin' && tab && !['worker_income', 'admin_income', 'salary_withdrawals'].includes(tab)) {
+      // Admin: only worker_income, admin_income, and salary_withdrawals
+      window.history.replaceState({}, '', '/?tab=worker_income');
+      setActiveTable('worker_income');
+      return;
+    }
+    
+    if (tab && ['admin_income', 'worker_income', 'expenses', 'workers', 'salary_withdrawals'].includes(tab)) {
       setActiveTable(tab);
     } else {
       // Default table based on user role
@@ -202,6 +218,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               (dataWorkerRecord.nomor_wa && dataWorkerRecord.nomor_wa.toLowerCase().includes(query)) ||
               (dataWorkerRecord.role && dataWorkerRecord.role.toLowerCase().includes(query)) ||
               (dataWorkerRecord.status && dataWorkerRecord.status.toLowerCase().includes(query))
+            );
+          case "salary_withdrawals":
+            const salaryRecord = record as SalaryWithdrawal;
+            return (
+              (salaryRecord.worker && salaryRecord.worker.toLowerCase().includes(query)) ||
+              (salaryRecord.catatan && salaryRecord.catatan.toLowerCase().includes(query)) ||
+              (salaryRecord.amount && salaryRecord.amount.toString().includes(query))
             );
           default:
             return false;
@@ -327,7 +350,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
                       filters.selectedStatus !== "all";
     
     // If no filters and no search, calculate only current month for tables with date
-    const isDateBasedTable = activeTable === "admin_income" || activeTable === "worker_income" || activeTable === "expenses";
+    const isDateBasedTable = activeTable === "admin_income" || activeTable === "worker_income" || activeTable === "expenses" || activeTable === "salary_withdrawals";
     if (!hasFilters && !searchQuery.trim() && isDateBasedTable) {
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth();
@@ -343,6 +366,9 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       if (activeTable === "worker_income") {
         const fee = (record as WorkerIncome).fee;
         return total + (fee && !isNaN(fee) ? fee : 0);
+      } else if (activeTable === "salary_withdrawals") {
+        const amount = (record as SalaryWithdrawal).amount;
+        return total + (amount && !isNaN(amount) ? amount : 0);
       }
       const nominal = (record as AdminIncome | Expense).nominal;
       return total + (nominal && !isNaN(nominal) ? nominal : 0);
@@ -377,7 +403,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'Public'} Mode
+                    {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : userRole === 'admin_keuangan' ? 'Admin Keuangan' : userRole === 'public' ? 'Public' : 'Public'} Mode
                   </span>
                   <Button 
                     onClick={signOut}
@@ -408,7 +434,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
 
             {/* Show total for worker_income in public mode only when both month and worker filters are selected */}
-            {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
+            {!(activeTable === "worker_income" && !isAdmin && !isPublic && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
                   {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {
