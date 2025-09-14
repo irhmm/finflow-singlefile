@@ -154,7 +154,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                   >
                     {item.isRoute ? (
                       <NavLink
-                        to={item.path}
+                        to={item.path || '/'}
                         className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
                       >
                         <item.icon className="h-5 w-5" />
