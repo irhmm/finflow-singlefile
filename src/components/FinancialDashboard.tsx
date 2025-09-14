@@ -82,8 +82,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     const tab = urlParams.get('tab') as TableType;
     
     // Access control based on role
-    if (!user && tab && tab !== 'worker_income') {
-      // Anonymous users: only worker_income
+    if (!user && tab && !['worker_income', 'salary_withdrawals'].includes(tab)) {
+      // Anonymous users: only worker_income and salary_withdrawals
       window.history.replaceState({}, '', '/?tab=worker_income');
       setActiveTable('worker_income');
       return;
