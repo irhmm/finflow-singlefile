@@ -97,6 +97,17 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
       );
     }
     
+    if (userRole === 'admin_keuangan') {
+      // Admin Keuangan: full access to all financial tables
+      return navigationItems.filter(item => 
+        item.table === 'worker_income' || 
+        item.table === 'admin_income' || 
+        item.table === 'expenses' || 
+        item.table === 'workers' || 
+        item.table === 'rekap_gaji'
+      );
+    }
+    
     if (userRole === 'super_admin') {
       // Super admin: all tables
       return navigationItems;
@@ -116,7 +127,9 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
             Sistem Keuangan
             {user && (
               <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
-                {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : 'User'}
+                {userRole === 'super_admin' ? 'Super Admin' : 
+                 userRole === 'admin' ? 'Admin' : 
+                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'User'}
               </span>
             )}
           </SidebarGroupLabel>
