@@ -30,21 +30,13 @@ function AppContent() {
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
           <Route path="/admin-login" element={<AuthForm onSuccess={() => window.location.href = "/"} />} />
-          <Route path="/" element={
-            <ProtectedRoute requireAdmin={true}>
-              <Index />
-            </ProtectedRoute>
-          } />
+          <Route path="/" element={<Index />} />
           <Route path="/pendapatan-admin" element={
             <ProtectedRoute requireAdmin={true}>
               <Index />
             </ProtectedRoute>
           } />
-          <Route path="/pendapatan-worker" element={
-            <ProtectedRoute requireAdmin={true}>
-              <Index />
-            </ProtectedRoute>
-          } />
+          <Route path="/pendapatan-worker" element={<Index />} />
           <Route path="/pengeluaran" element={
             <ProtectedRoute requireAdmin={true}>
               <Index />
@@ -55,11 +47,7 @@ function AppContent() {
               <LaporanKeuangan />
             </ProtectedRoute>
           } />
-          <Route path="/rekap-gaji-worker" element={
-            <ProtectedRoute requireAdmin={true}>
-              <RekapGajiWorker />
-            </ProtectedRoute>
-          } />
+          <Route path="/rekap-gaji-worker" element={<RekapGajiWorker />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

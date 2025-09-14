@@ -59,6 +59,7 @@ export default function RekapGajiWorker() {
   const [workerComboboxOpen, setWorkerComboboxOpen] = useState(false);
   const [monthComboboxOpen, setMonthComboboxOpen] = useState(false);
   const itemsPerPage = 15;
+  const canWrite = ['admin', 'admin_keuangan', 'super_admin'].includes(userRole);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -363,88 +364,90 @@ export default function RekapGajiWorker() {
                       </Popover>
                     </div>
 
-                    <div className="flex items-end">
-                      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button className="w-full bg-primary hover:bg-primary/90">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Tambah Pengambilan Gaji
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Tambah Pengambilan Gaji</DialogTitle>
-                          </DialogHeader>
-                          <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="formWorker">Worker</Label>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline" 
-                                    role="combobox"
-                                    className="w-full justify-between"
-                                  >
-                                    {formData.worker || "Pilih worker..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-full p-0" align="start">
-                                  <Command>
-                                    <CommandInput placeholder="Cari worker..." />
-                                    <CommandList>
-                                      <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
-                                      <CommandGroup>
-                                        {workers.map((worker) => (
-                                          <CommandItem
-                                            key={worker}
-                                            value={worker}
-                                            onSelect={(currentValue) => {
-                                              setFormData(prev => ({ ...prev, worker: currentValue }));
-                                            }}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                formData.worker === worker ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            {worker}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="amount">Jumlah</Label>
-                              <Input
-                                type="number"
-                                placeholder="Masukkan jumlah..."
-                                value={formData.amount}
-                                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="catatan">Catatan (opsional)</Label>
-                              <Textarea
-                                placeholder="Masukkan catatan..."
-                                value={formData.catatan}
-                                onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
-                              />
-                            </div>
-                            
-                            <Button type="submit" className="w-full">
-                              Simpan
+                    {canWrite && (
+                      <div className="flex items-end">
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button className="w-full bg-primary hover:bg-primary/90">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Tambah Pengambilan Gaji
                             </Button>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Tambah Pengambilan Gaji</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="formWorker">Worker</Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline" 
+                                      role="combobox"
+                                      className="w-full justify-between"
+                                    >
+                                      {formData.worker || "Pilih worker..."}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-full p-0" align="start">
+                                    <Command>
+                                      <CommandInput placeholder="Cari worker..." />
+                                      <CommandList>
+                                        <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
+                                        <CommandGroup>
+                                          {workers.map((worker) => (
+                                            <CommandItem
+                                              key={worker}
+                                              value={worker}
+                                              onSelect={(currentValue) => {
+                                                setFormData(prev => ({ ...prev, worker: currentValue }));
+                                              }}
+                                            >
+                                              <Check
+                                                className={cn(
+                                                  "mr-2 h-4 w-4",
+                                                  formData.worker === worker ? "opacity-100" : "opacity-0"
+                                                )}
+                                              />
+                                              {worker}
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="amount">Jumlah</Label>
+                                <Input
+                                  type="number"
+                                  placeholder="Masukkan jumlah..."
+                                  value={formData.amount}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="catatan">Catatan (opsional)</Label>
+                                <Textarea
+                                  placeholder="Masukkan catatan..."
+                                  value={formData.catatan}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
+                                />
+                              </div>
+                              
+                              <Button type="submit" className="w-full">
+                                Simpan
+                              </Button>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
