@@ -377,7 +377,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : 'Public'} Mode
+                    {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'Public'} Mode
                   </span>
                   <Button 
                     onClick={signOut}
