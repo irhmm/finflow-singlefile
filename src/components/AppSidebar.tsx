@@ -88,6 +88,14 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
       return navigationItems.filter(item => item.table === 'worker_income');
     }
     
+    if (userRole === 'public') {
+      // Public role: only worker_income and rekap_gaji (read only)
+      return navigationItems.filter(item => 
+        item.table === 'worker_income' || 
+        item.table === 'rekap_gaji'
+      );
+    }
+    
     if (userRole === 'admin') {
       // Admin: worker_income, admin_income, and rekap_gaji access
       return navigationItems.filter(item => 
@@ -129,7 +137,8 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
               <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
                 {userRole === 'super_admin' ? 'Super Admin' : 
                  userRole === 'admin' ? 'Admin' : 
-                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'User'}
+                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 
+                 userRole === 'public' ? 'Public' : 'User'}
               </span>
             )}
           </SidebarGroupLabel>

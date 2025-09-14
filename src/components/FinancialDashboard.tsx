@@ -80,6 +80,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       return;
     }
     
+    if (userRole === 'public' && tab && !['worker_income'].includes(tab)) {
+      // Public role: only worker_income (salary_withdrawals handled in separate pages)
+      window.history.replaceState({}, '', '/?tab=worker_income');
+      setActiveTable('worker_income');
+      return;
+    }
+    
     if (userRole === 'admin' && tab && !['worker_income', 'admin_income'].includes(tab)) {
       // Admin: only worker_income and admin_income
       window.history.replaceState({}, '', '/?tab=worker_income');
@@ -377,7 +384,10 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {userRole === 'super_admin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : userRole === 'admin_keuangan' ? 'Admin Keuangan' : 'Public'} Mode
+                    {userRole === 'super_admin' ? 'Super Admin' : 
+                     userRole === 'admin' ? 'Admin' : 
+                     userRole === 'admin_keuangan' ? 'Admin Keuangan' : 
+                     userRole === 'public' ? 'Public' : 'User'} Mode
                   </span>
                   <Button 
                     onClick={signOut}
