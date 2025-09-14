@@ -34,9 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const role = data?.role || 'user';
       setUserRole(role);
-      setIsAdmin(role === 'admin' || role === 'super_admin');
+      setIsAdmin(role === 'admin' || role === 'admin_keuangan' || role === 'super_admin');
       setIsSuperAdmin(role === 'super_admin');
-      setCanEdit(role === 'super_admin');
+      setCanEdit(role === 'admin_keuangan' || role === 'super_admin');
     } catch (error) {
       setUserRole('user');
       setIsAdmin(false);
