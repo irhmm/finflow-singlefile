@@ -84,8 +84,11 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   // Filter navigation items based on role permissions
   const getVisibleItems = () => {
     if (!user) {
-      // Anonymous users: only worker_income
-      return navigationItems.filter(item => item.table === 'worker_income');
+      // Anonymous users: worker_income and rekap_gaji
+      return navigationItems.filter(item => 
+        item.table === 'worker_income' || 
+        item.table === 'rekap_gaji'
+      );
     }
     
     if (userRole === 'public') {
