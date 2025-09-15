@@ -32,7 +32,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
       
-      const role = data?.role || 'user';
+      const rawRole = (data?.role ?? 'user');
+      const role = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
       setUserRole(role);
       setIsAdmin(role === 'admin' || role === 'admin_keuangan' || role === 'super_admin');
       setIsSuperAdmin(role === 'super_admin');
