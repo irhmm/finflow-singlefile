@@ -244,19 +244,19 @@ export default function LaporanKeuangan() {
       <div className="flex min-h-screen w-full">
         <AppSidebar activeTable="laporan" onTableChange={() => {}} />
         
-        <main className="flex-1 p-6 bg-gradient-to-br from-background via-background to-secondary/5">
-          <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <main className="flex-1 p-3 md:p-6 bg-gradient-to-br from-background via-background to-secondary/5">
+          <div className="mb-4 md:mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <SidebarTrigger />
-              <div className="flex items-center gap-4">
-                <Calendar className="h-8 w-8 text-secondary" />
-                <h1 className="text-4xl font-bold text-header">
+              <div className="flex items-center gap-2 md:gap-4">
+                <Calendar className="h-6 w-6 md:h-8 md:w-8 text-secondary" />
+                <h1 className="text-2xl md:text-4xl font-bold text-header">
                   Rekap Bulanan
                 </h1>
               </div>
             </div>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full max-w-32">
                 <SelectValue placeholder="Tahun" />
               </SelectTrigger>
               <SelectContent>
@@ -269,9 +269,9 @@ export default function LaporanKeuangan() {
             </Select>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {summaryCards.map((card, index) => {
                 const Icon = card.icon;
                 const percentageChange = calculatePercentageChange(card.value, card.previousValue);
@@ -281,19 +281,19 @@ export default function LaporanKeuangan() {
                 
                 return (
                   <Card key={index} className={`${card.bgColor} border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all duration-300`}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <Icon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                        <div className={`flex items-center gap-1 text-sm font-medium ${changeColor}`}>
-                          <ChangeIcon className="h-4 w-4" />
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <Icon className="h-6 w-6 md:h-8 md:w-8 text-gray-600 dark:text-gray-400" />
+                        <div className={`flex items-center gap-1 text-xs md:text-sm font-medium ${changeColor}`}>
+                          <ChangeIcon className="h-3 w-3 md:h-4 md:w-4" />
                           {Math.abs(percentageChange).toFixed(1)}%
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                           {card.title}
                         </p>
-                        <div className={`text-2xl font-bold ${card.textColor} ${loading ? 'animate-pulse' : ''}`}>
+                        <div className={`text-lg md:text-2xl font-bold ${card.textColor} ${loading ? 'animate-pulse' : ''}`}>
                           {loading ? "..." : formatCurrency(card.value)}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
@@ -309,17 +309,17 @@ export default function LaporanKeuangan() {
             {/* Monthly Chart */}
             <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
               <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                    <CardTitle className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
                       Grafik Bulanan
                     </CardTitle>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                       Total data per bulan {selectedYear}
                     </p>
                   </div>
                   <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-28 h-9 bg-blue-50 border-blue-200 text-blue-700 font-medium">
+                    <SelectTrigger className="w-full max-w-28 h-9 bg-blue-50 border-blue-200 text-blue-700 font-medium">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -357,7 +357,7 @@ export default function LaporanKeuangan() {
                         color: "hsl(221, 83%, 53%)",
                       },
                     }}
-                    className="h-[400px] w-full"
+                    className="h-[300px] md:h-[400px] w-full max-w-full"
                   >
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart

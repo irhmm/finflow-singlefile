@@ -364,26 +364,27 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           onTableChange={setActiveTable} 
         />
         
-        <main className="flex-1 p-6 bg-gradient-to-br from-background via-background to-secondary/5">
-          <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <main className="flex-1 p-3 md:p-6 bg-gradient-to-br from-background via-background to-secondary/5">
+          <div className="mb-4 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
               <SidebarTrigger />
-              <h1 className="text-4xl font-bold text-header">
+              <h1 className="text-2xl md:text-4xl font-bold text-header">
                 Sistem Keuangan
               </h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
               {!user ? (
                 <Button 
                   onClick={() => window.location.href = '/admin-login'} 
-                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
+                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant w-full sm:w-auto text-sm md:text-base"
                 >
                   <LogIn className="h-4 w-4" />
-                  Login as Admin
+                  <span className="hidden sm:inline">Login as Admin</span>
+                  <span className="sm:hidden">Login</span>
                 </Button>
               ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs md:text-sm text-muted-foreground">
                     {userRole === 'super_admin' ? 'Super Admin' : 
                      userRole === 'admin' ? 'Admin' : 
                      userRole === 'admin_keuangan' ? 'Admin Keuangan' : 
@@ -392,26 +393,28 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
                   <Button 
                     onClick={signOut}
                     variant="outline" 
-                    className="gap-2"
+                    className="gap-2 w-full sm:w-auto text-sm"
                   >
                     <LogOut className="h-4 w-4" />
-                    Logout
+                    <span className="hidden sm:inline">Logout</span>
+                    <span className="sm:hidden">Exit</span>
                   </Button>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold text-header">{tableLabels[activeTable]}</h2>
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <h2 className="text-xl md:text-3xl font-bold text-header">{tableLabels[activeTable]}</h2>
               {canEdit && (
                 <Button 
                   onClick={handleCreate} 
-                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant"
+                  className="gap-2 bg-secondary hover:bg-secondary/90 text-white shadow-elegant w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
-                  Tambah Data
+                  <span className="hidden sm:inline">Tambah Data</span>
+                  <span className="sm:hidden">Tambah</span>
                 </Button>
               )}
             </div>
@@ -419,22 +422,22 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
             {/* Show total for worker_income in public mode only when both month and worker filters are selected */}
             {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
-              <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
-                <h3 className="text-2xl font-bold mb-3 text-header">
+              <Card className="p-4 md:p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
+                <h3 className="text-lg md:text-2xl font-bold mb-2 md:mb-3 text-header">
                   {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {
                     (searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all") || (filters.selectedRole !== "all") || (filters.selectedStatus !== "all")) 
                       ? "(Hasil Filter)" 
                       : activeTable !== "workers" ? "(Bulan Ini)" : ""
                   }
                 </h3>
-                <p className="text-4xl font-bold text-header">
+                <p className="text-2xl md:text-4xl font-bold text-header break-words">
                   {activeTable === "workers" 
                     ? `${calculateTotal()} Worker`
                     : `Rp ${calculateTotal().toLocaleString("id-ID")}`
                   }
                 </p>
                 {(searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all")) && (
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-xs md:text-sm text-muted-foreground mt-2">
                     dari {data.length} total data
                   </p>
                 )}

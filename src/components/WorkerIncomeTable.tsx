@@ -226,7 +226,7 @@ export function WorkerIncomeTable({
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Filters */}
       {onSearchChange && onFiltersChange && (
         <TableFilters
@@ -239,19 +239,21 @@ export function WorkerIncomeTable({
           availableMonths={getAvailableMonths()}
           exportData={filteredData.length > 0 ? filteredData : data}
           tableType="worker_income"
-          className="mb-6"
+          className="mb-4 md:mb-6"
         />
       )}
       <Tabs defaultValue="daily" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <TabsList className="bg-muted/50 border border-border/50">
-          <TabsTrigger value="daily" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Per Hari
+      <div className="flex items-center justify-center lg:justify-between">
+        <TabsList className="bg-muted/50 border border-border/50 grid grid-cols-2 w-full max-w-md lg:max-w-none lg:w-auto">
+          <TabsTrigger value="daily" className="gap-2 text-xs md:text-sm">
+            <Clock className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Per Hari</span>
+            <span className="sm:hidden">Harian</span>
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Per Bulan
+          <TabsTrigger value="monthly" className="gap-2 text-xs md:text-sm">
+            <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Per Bulan</span>
+            <span className="sm:hidden">Bulanan</span>
           </TabsTrigger>
         </TabsList>
       </div>
@@ -265,19 +267,19 @@ export function WorkerIncomeTable({
             
             return (
               <Card key={date} className="overflow-hidden shadow-card border-border/50">
-                <div className="bg-gradient-to-r from-primary/5 to-secondary/5 p-4 border-b border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-lg text-foreground">
+                <div className="bg-gradient-to-r from-primary/5 to-secondary/5 p-3 md:p-4 border-b border-border/50">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base md:text-lg text-foreground">
                         {formatDate(date)}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs md:text-sm text-muted-foreground">
                         {records.length} transaksi
                       </p>
                     </div>
                     {isAdmin && (
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">
+                      <div className="text-right sm:flex-shrink-0">
+                        <div className="text-lg md:text-2xl font-bold text-primary">
                           {formatCurrency(dayTotal)}
                         </div>
                         <div className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -288,8 +290,51 @@ export function WorkerIncomeTable({
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <Table className="w-full">
+                {/* Mobile Card View */}
+                <div className="lg:hidden p-3 space-y-3">
+                  {records.map(record => (
+                    <div key={record.id} className="p-3 bg-muted/20 rounded-lg border border-border/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <Badge variant="secondary" className="bg-[#3b82f6]/10 text-[#3b82f6] text-xs">
+                          {record.code}
+                        </Badge>
+                        <span className="font-bold text-[#3b82f6] text-sm">
+                          {formatCurrency(record.fee)}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div><span className="text-muted-foreground">Jobdesk: </span>{record.jobdesk}</div>
+                        <div><span className="text-muted-foreground">Worker: </span>{record.worker}</div>
+                      </div>
+                      {!isReadOnly && (
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEdit?.(record)}
+                            className="flex-1 text-xs"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDelete?.(record)}
+                            className="flex-1 text-xs text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Hapus
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table className="w-full min-w-[600px]">
                     <TableHeader>
                       <TableRow className="bg-muted/60 border-b-2 border-border/30 hover:bg-muted/60">
                         <TableHead className="font-bold text-foreground px-6 py-4 text-left">Kode</TableHead>
@@ -317,19 +362,19 @@ export function WorkerIncomeTable({
             
             return (
               <Card key={monthYear} className="overflow-hidden shadow-card border-border/50">
-                <div className="bg-gradient-to-r from-secondary/5 to-accent/5 p-4 border-b border-border/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-xl text-foreground">
+                <div className="bg-gradient-to-r from-secondary/5 to-accent/5 p-3 md:p-4 border-b border-border/50">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg md:text-xl text-foreground">
                         {getMonthName(monthYear)}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs md:text-sm text-muted-foreground">
                         {records.length} transaksi total
                       </p>
                     </div>
                     {isAdmin && (
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-secondary">
+                      <div className="text-right sm:flex-shrink-0">
+                        <div className="text-xl md:text-3xl font-bold text-secondary">
                           {formatCurrency(monthTotal)}
                         </div>
                         <div className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -340,8 +385,58 @@ export function WorkerIncomeTable({
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <Table className="w-full">
+                {/* Mobile Card View */}
+                <div className="lg:hidden p-3 space-y-3">
+                  {records
+                    .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+                    .map(record => (
+                    <div key={record.id} className="p-3 bg-muted/20 rounded-lg border border-border/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex gap-2 items-center">
+                          <Badge variant="secondary" className="bg-[#3b82f6]/10 text-[#3b82f6] text-xs">
+                            {record.code}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateShort(record.tanggal)}
+                          </span>
+                        </div>
+                        <span className="font-bold text-[#3b82f6] text-sm">
+                          {formatCurrency(record.fee)}
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div><span className="text-muted-foreground">Jobdesk: </span>{record.jobdesk}</div>
+                        <div><span className="text-muted-foreground">Worker: </span>{record.worker}</div>
+                      </div>
+                      {!isReadOnly && (
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEdit?.(record)}
+                            className="flex-1 text-xs"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDelete?.(record)}
+                            className="flex-1 text-xs text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Hapus
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table className="w-full min-w-[700px]">
                     <TableHeader>
                       <TableRow className="bg-muted/60 border-b-2 border-border/30 hover:bg-muted/60">
                         <TableHead className="font-bold text-foreground px-6 py-4 text-left">Tanggal</TableHead>
@@ -367,12 +462,12 @@ export function WorkerIncomeTable({
 
     {/* Pagination */}
     {totalItems > itemsPerPage && onPageChange && (
-      <div className="flex items-center bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between bg-background border border-border/50 rounded-lg px-4 md:px-6 py-4 shadow-sm gap-3">
+        <div className="text-xs md:text-sm text-muted-foreground">
           Showing {startIndex + 1} to {endIndex} of {totalItems}
         </div>
         
-        <div className="ml-auto">
+        <div className="w-full sm:w-auto flex justify-center">
           <Pagination>
           <PaginationContent className="gap-1">
             <PaginationItem>

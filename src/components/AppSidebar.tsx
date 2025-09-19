@@ -134,8 +134,8 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
     <Sidebar collapsible="icon" className="border-r border-secondary/20">
       <SidebarContent className="bg-gradient-to-b from-card to-secondary/5">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-header font-semibold flex items-center justify-between">
-            Sistem Keuangan
+          <SidebarGroupLabel className="text-header font-semibold flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+            <span className="text-sm md:text-base">Sistem Keuangan</span>
             {user && (
               <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
                 {userRole === 'super_admin' ? 'Super Admin' : 
@@ -160,8 +160,8 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                         to={item.path || '/'}
                         className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.title}</span>
+                        <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                        <span className="font-medium text-sm md:text-base truncate">{item.title}</span>
                       </NavLink>
                     ) : (
                       <button
@@ -171,8 +171,8 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
                         }}
                         className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.title}</span>
+                        <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                        <span className="font-medium text-sm md:text-base truncate">{item.title}</span>
                       </button>
                     )}
                   </SidebarMenuButton>
