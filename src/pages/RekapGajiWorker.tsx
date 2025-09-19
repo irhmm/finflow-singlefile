@@ -247,19 +247,19 @@ export default function RekapGajiWorker() {
         <AppSidebar activeTable="rekap_gaji" onTableChange={() => {}} />
         
         <main className="flex-1">
-          <header className="h-12 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 md:px-4">
-            <SidebarTrigger className="mr-2 md:mr-4" />
+          <header className="h-12 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <SidebarTrigger className="ml-2" />
             <div className="flex-1 text-center">
-              <h1 className="text-base md:text-lg font-semibold">Rekap Gaji Worker</h1>
+              <h1 className="text-lg font-semibold">Rekap Gaji Worker</h1>
             </div>
           </header>
 
-          <div className="bg-gradient-to-br from-background to-secondary/10 p-3 md:p-6">
-            <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+          <div className="bg-gradient-to-br from-background to-secondary/10 p-4 md:p-6">
+            <div className="max-w-7xl mx-auto space-y-6">
               {/* Header */}
               <div className="text-center space-y-2">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary">Rekap Gaji Worker</h1>
-                <p className="text-sm md:text-base text-muted-foreground">Kelola pengambilan gaji dan pendapatan worker</p>
+                <h1 className="text-3xl md:text-4xl font-bold text-primary">Rekap Gaji Worker</h1>
+                <p className="text-muted-foreground">Kelola pengambilan gaji dan pendapatan worker</p>
               </div>
 
               {/* ... keep existing code (filter section and rest of component) */}
@@ -273,7 +273,7 @@ export default function RekapGajiWorker() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="worker">Pilih Worker</Label>
                       <Popover open={workerComboboxOpen} onOpenChange={setWorkerComboboxOpen}>
@@ -282,9 +282,9 @@ export default function RekapGajiWorker() {
                             variant="outline"
                             role="combobox"
                             aria-expanded={workerComboboxOpen}
-                            className="w-full justify-between text-left"
+                            className="w-full justify-between"
                           >
-                            <span className="truncate">{selectedWorker || "Pilih worker..."}</span>
+                            {selectedWorker || "Pilih worker..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
@@ -327,9 +327,9 @@ export default function RekapGajiWorker() {
                             variant="outline"
                             role="combobox"
                             aria-expanded={monthComboboxOpen}
-                            className="w-full justify-between text-left"
+                            className="w-full justify-between"
                           >
-                            <span className="truncate">{selectedMonth ? format(new Date(selectedMonth), "MMMM yyyy", { locale: id }) : "Pilih bulan..."}</span>
+                            {selectedMonth ? format(new Date(selectedMonth), "MMMM yyyy", { locale: id }) : "Pilih bulan..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
@@ -370,8 +370,7 @@ export default function RekapGajiWorker() {
                           <DialogTrigger asChild>
                             <Button className="w-full bg-primary hover:bg-primary/90">
                               <Plus className="h-4 w-4 mr-2" />
-                              <span className="hidden sm:inline">Tambah Pengambilan Gaji</span>
-                              <span className="sm:hidden">Tambah Gaji</span>
+                              Tambah Pengambilan Gaji
                             </Button>
                           </DialogTrigger>
                           <DialogContent>

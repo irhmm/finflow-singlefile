@@ -127,9 +127,9 @@ export function TableFilters({
   };
 
   return (
-    <div className={`flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 ${className}`}>
+    <div className={`flex items-center justify-between gap-4 ${className}`}>
       {/* Search Bar */}
-      <div className="flex-1 lg:max-w-md relative">
+      <div className="flex-1 max-w-md relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={tableType === "admin_income" ? "Cari berdasarkan code..." : tableType === "worker_income" ? "Cari berdasarkan code, jobdesk, atau worker..." : "Cari berdasarkan nama, role, atau status..."}
@@ -139,7 +139,7 @@ export function TableFilters({
         />
       </div>
 
-      <div className="flex items-center gap-3 justify-end">
+      <div className="flex items-center gap-3">
         {/* Filter Button */}
         <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <PopoverTrigger asChild>
@@ -159,7 +159,7 @@ export function TableFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-4 shadow-lg border border-border/50" align="end" side="bottom">
+          <PopoverContent className="w-80 p-4 shadow-lg border border-border/50" align="end">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">Filter Data</h4>

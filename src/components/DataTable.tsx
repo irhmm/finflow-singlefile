@@ -247,7 +247,7 @@ export function DataTable({
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       {/* Filters */}
       {onSearchChange && onFiltersChange && (
         <TableFilters
@@ -260,141 +260,12 @@ export function DataTable({
           availableMonths={getAvailableMonths()}
           exportData={filteredData.length > 0 ? filteredData : data}
           tableType={tableType as "admin_income" | "worker_income"}
-          className="mb-4 md:mb-6"
+          className="mb-6"
         />
       )}
-      
-      {/* Mobile Card View */}
-      <div className="lg:hidden space-y-3">
-        {data.map((record) => (
-          <Card key={record.id} className="p-4 border border-border/30 shadow-sm">
-            {tableType === "admin_income" && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div className="text-sm font-medium text-muted-foreground">
-                    {formatDate((record as AdminIncome).tanggal)}
-                  </div>
-                  <div className="text-lg font-bold text-primary">
-                    {formatCurrency((record as AdminIncome).nominal)}
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Code: </span>
-                  <span className="font-medium">{(record as AdminIncome).code || "-"}</span>
-                </div>
-                {!isReadOnly && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit?.(record)}
-                      className="flex-1"
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDelete?.(record)}
-                      className="flex-1 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Hapus
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {tableType === "expenses" && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div className="text-sm font-medium text-muted-foreground">
-                    {formatDate((record as Expense).tanggal)}
-                  </div>
-                  <div className="text-lg font-bold text-primary">
-                    {formatCurrency((record as Expense).nominal)}
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Keterangan: </span>
-                  <span className="font-medium">{(record as Expense).keterangan || "-"}</span>
-                </div>
-                {!isReadOnly && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit?.(record)}
-                      className="flex-1"
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDelete?.(record)}
-                      className="flex-1 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Hapus
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {tableType === "workers" && (
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div className="text-lg font-semibold">{(record as Worker).nama}</div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    (record as Worker).status === 'aktif' 
-                      ? 'bg-green-50 text-green-700' 
-                      : 'bg-red-50 text-red-700'
-                  }`}>
-                    {(record as Worker).status}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-1 text-sm">
-                  <div><span className="text-muted-foreground">Role: </span>{(record as Worker).role || "-"}</div>
-                  <div><span className="text-muted-foreground">Rekening: </span>{(record as Worker).rekening || "-"}</div>
-                  <div><span className="text-muted-foreground">WA: </span>{(record as Worker).nomor_wa || "-"}</div>
-                </div>
-                {!isReadOnly && (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit?.(record)}
-                      className="flex-1"
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDelete?.(record)}
-                      className="flex-1 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Hapus
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
-
-      {/* Desktop Table View */}
-      <Card className="hidden lg:block overflow-hidden border border-border/30 shadow-lg rounded-xl">
+      <Card className="overflow-hidden border border-border/30 shadow-lg rounded-xl">
         <div className="overflow-x-auto">
-          <Table className="w-full min-w-[600px]">
+          <Table className="w-full">
             <TableHeader>
               <TableRow className="bg-muted/60 border-b-2 border-border/30 hover:bg-muted/60">
                 {renderTableHeaders()}
@@ -409,12 +280,12 @@ export function DataTable({
 
       {/* Pagination */}
       {totalItems > itemsPerPage && onPageChange && (
-        <div className="flex flex-col sm:flex-row items-center justify-between bg-background border border-border/50 rounded-lg px-4 md:px-6 py-4 shadow-sm gap-3">
-          <div className="text-xs md:text-sm text-muted-foreground">
+        <div className="flex items-center bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
+          <div className="text-sm text-muted-foreground">
             Showing {startIndex + 1} to {endIndex} of {totalItems}
           </div>
           
-          <div className="w-full sm:w-auto flex justify-center">
+          <div className="ml-auto">
             <Pagination>
               <PaginationContent className="gap-1">
                 <PaginationItem>
