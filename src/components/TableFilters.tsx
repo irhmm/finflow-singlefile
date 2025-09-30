@@ -8,14 +8,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect, SearchableSelectOption } from "@/components/ui/searchable-select";
 import * as XLSX from 'xlsx';
 
 export interface FilterOptions {
@@ -180,22 +174,17 @@ export function TableFilters({
               {tableType !== "workers" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Bulan</label>
-                  <Select
+                  <SearchableSelect
                     value={filters.selectedMonth}
                     onValueChange={(value) => onFiltersChange({ ...filters, selectedMonth: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih bulan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Bulan</SelectItem>
-                      {availableMonths.map((month) => (
-                        <SelectItem key={month.value} value={month.value}>
-                          {month.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: "all", label: "Semua Bulan" },
+                      ...availableMonths
+                    ]}
+                    placeholder="Pilih bulan"
+                    searchPlaceholder="Cari bulan..."
+                    emptyText="Bulan tidak ditemukan."
+                  />
                 </div>
               )}
 
@@ -203,22 +192,17 @@ export function TableFilters({
               {tableType === "admin_income" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Code</label>
-                  <Select
+                  <SearchableSelect
                     value={filters.selectedCode}
                     onValueChange={(value) => onFiltersChange({ ...filters, selectedCode: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih code" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Code</SelectItem>
-                      {availableCodes.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: "all", label: "Semua Code" },
+                      ...availableCodes.map((code) => ({ value: code, label: code }))
+                    ]}
+                    placeholder="Pilih code"
+                    searchPlaceholder="Cari code..."
+                    emptyText="Code tidak ditemukan."
+                  />
                 </div>
               )}
 
@@ -226,22 +210,17 @@ export function TableFilters({
               {tableType === "worker_income" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Worker</label>
-                  <Select
+                  <SearchableSelect
                     value={filters.selectedWorker}
                     onValueChange={(value) => onFiltersChange({ ...filters, selectedWorker: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih worker" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Worker</SelectItem>
-                      {availableWorkers.map((worker) => (
-                        <SelectItem key={worker} value={worker}>
-                          {worker}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: "all", label: "Semua Worker" },
+                      ...availableWorkers.map((worker) => ({ value: worker, label: worker }))
+                    ]}
+                    placeholder="Pilih worker"
+                    searchPlaceholder="Cari nama worker..."
+                    emptyText="Worker tidak ditemukan."
+                  />
                 </div>
               )}
 
@@ -249,22 +228,20 @@ export function TableFilters({
               {tableType === "workers" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Role</label>
-                  <Select
+                  <SearchableSelect
                     value={filters.selectedRole}
                     onValueChange={(value) => onFiltersChange({ ...filters, selectedRole: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Role</SelectItem>
-                      {Array.from(new Set(exportData.map((worker: any) => worker.role).filter(Boolean))).map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: "all", label: "Semua Role" },
+                      ...Array.from(new Set(exportData.map((worker: any) => worker.role).filter(Boolean))).map((role) => ({
+                        value: role,
+                        label: role
+                      }))
+                    ]}
+                    placeholder="Pilih role"
+                    searchPlaceholder="Cari role..."
+                    emptyText="Role tidak ditemukan."
+                  />
                 </div>
               )}
 
@@ -272,22 +249,20 @@ export function TableFilters({
               {tableType === "workers" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <Select
+                  <SearchableSelect
                     value={filters.selectedStatus}
                     onValueChange={(value) => onFiltersChange({ ...filters, selectedStatus: value })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      {Array.from(new Set(exportData.map((worker: any) => worker.status).filter(Boolean))).map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: "all", label: "Semua Status" },
+                      ...Array.from(new Set(exportData.map((worker: any) => worker.status).filter(Boolean))).map((status) => ({
+                        value: status,
+                        label: status
+                      }))
+                    ]}
+                    placeholder="Pilih status"
+                    searchPlaceholder="Cari status..."
+                    emptyText="Status tidak ditemukan."
+                  />
                 </div>
               )}
             </div>
