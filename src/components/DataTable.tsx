@@ -89,6 +89,10 @@ export function DataTable({
     return `Rp ${amount.toLocaleString("id-ID")}`;
   };
 
+  const safeText = (value: any, placeholder: string = '-') => {
+    return (typeof value === 'string' ? value.trim() : value) || placeholder;
+  };
+
   if (loading) {
     return (
       <Card className="p-8 border-dashed">
@@ -154,7 +158,8 @@ export function DataTable({
     }
   };
 
-  const renderTableRow = (record: DataRecord) => {
+  const renderTableRow = (record: DataRecord, index: number) => {
+    const rowNumber = startIndex + index + 1;
     const commonActions = !isReadOnly ? (
       <TableCell className="px-8 py-4 text-center border-l border-border/20">
         <div className="flex gap-3 justify-center">
@@ -203,20 +208,23 @@ export function DataTable({
 
       case "workers":
         const workerRecord = record as Worker;
+        const statusText = safeText(workerRecord.status, 'non aktif');
+        const isActive = statusText.toLowerCase() === 'aktif';
+        
         return (
           <TableRow key={workerRecord.id} className="hover:bg-muted/40 transition-colors duration-200 border-b border-border/10">
-            <TableCell className="px-6 py-4 border-r border-border/10 text-center font-medium text-muted-foreground">{workerRecord.id}</TableCell>
-            <TableCell className="px-6 py-4 border-r border-border/10 font-semibold">{workerRecord.nama}</TableCell>
-            <TableCell className="px-6 py-4 border-r border-border/10 font-mono text-sm">{workerRecord.rekening || "-"}</TableCell>
-            <TableCell className="px-6 py-4 border-r border-border/10">{workerRecord.nomor_wa || "-"}</TableCell>
-            <TableCell className="px-6 py-4 border-r border-border/10">{workerRecord.role || "-"}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10 text-center font-medium text-muted-foreground">{rowNumber}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10 font-semibold">{safeText(workerRecord.nama, '(Tanpa Nama)')}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10 font-mono text-sm">{safeText(workerRecord.rekening)}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10">{safeText(workerRecord.nomor_wa)}</TableCell>
+            <TableCell className="px-6 py-4 border-r border-border/10">{safeText(workerRecord.role)}</TableCell>
             <TableCell className="px-6 py-4 border-r border-border/10 text-center">
               <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border ${
-                workerRecord.status === 'aktif' 
+                isActive
                   ? 'bg-green-50 text-green-700 border-green-200' 
                   : 'bg-red-50 text-red-700 border-red-200'
               }`}>
-                {workerRecord.status}
+                {statusText}
               </span>
             </TableCell>
             {commonActions}
@@ -282,7 +290,7 @@ export function DataTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map(renderTableRow)}
+              {data.map((record, index) => renderTableRow(record, index))}
             </TableBody>
           </Table>
         </div>

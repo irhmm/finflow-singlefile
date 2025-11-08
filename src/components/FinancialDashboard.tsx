@@ -126,18 +126,45 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: result, error } = await supabase
-        .from(activeTable)
-        .select("*")
-        .order(activeTable === "workers" ? "created_at" : "tanggal", { ascending: false });
+      // Special handling for workers table to normalize data
+      if (activeTable === 'workers') {
+        const { data: result, error } = await supabase
+          .from('workers')
+          .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at')
+          .order('id', { ascending: false });
 
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
+        if (error) {
+          console.error("Supabase error:", error);
+          throw error;
+        }
+
+        // Normalize worker data to handle empty strings
+        const normalized = (result || []).map(r => ({
+          ...r,
+          nama: (r.nama || '').trim() || '(Tanpa Nama)',
+          rekening: (r.rekening || '').trim() || '-',
+          nomor_wa: (r.nomor_wa || '').trim() || '-',
+          role: (r.role || '').trim() || '-',
+          status: (r.status || '').trim() || 'non aktif',
+        }));
+
+        setData(normalized);
+        setFilteredData(normalized);
+      } else {
+        // Standard fetch for other tables
+        const { data: result, error } = await supabase
+          .from(activeTable)
+          .select("*")
+          .order("tanggal", { ascending: false });
+
+        if (error) {
+          console.error("Supabase error:", error);
+          throw error;
+        }
+        
+        setData(result || []);
+        setFilteredData(result || []);
       }
-      
-      setData(result || []);
-      setFilteredData(result || []);
     } catch (error: any) {
       console.error("Error loading data:", error);
       
