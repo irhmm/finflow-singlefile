@@ -122,6 +122,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null);
 
+  // Helper function to normalize worker names
+  const normalizeWorkerName = (name: string): string => {
+    if (!name || !name.trim()) return '(Unknown)';
+    const trimmed = name.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  };
+
   // Load data for active table
   const loadData = async () => {
     setLoading(true);
@@ -146,6 +153,42 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           nomor_wa: (r.nomor_wa || '').trim() || '-',
           role: (r.role || '').trim() || '-',
           status: (r.status || '').trim() || 'non aktif',
+        }));
+
+        setData(normalized);
+        setFilteredData(normalized);
+      } else if (activeTable === 'admin_income') {
+        const { data: result, error } = await supabase
+          .from('admin_income')
+          .select('*')
+          .order('tanggal', { ascending: false });
+
+        if (error) throw error;
+
+        // Normalize admin_income data
+        const normalized = (result || []).map(r => ({
+          ...r,
+          code: (r.code || '').trim() || null,
+          nominal: r.nominal || 0,
+        }));
+
+        setData(normalized);
+        setFilteredData(normalized);
+      } else if (activeTable === 'worker_income') {
+        const { data: result, error } = await supabase
+          .from('worker_income')
+          .select('*')
+          .order('tanggal', { ascending: false });
+
+        if (error) throw error;
+
+        // Normalize worker_income data with case-insensitive worker names
+        const normalized = (result || []).map(r => ({
+          ...r,
+          code: (r.code || '').trim() || 'NO_CODE',
+          jobdesk: (r.jobdesk || '').trim() || '(Tanpa jobdesk)',
+          worker: normalizeWorkerName(r.worker),
+          fee: r.fee || 0,
         }));
 
         setData(normalized);
@@ -278,7 +321,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
     if (filters.selectedWorker && filters.selectedWorker !== "all" && activeTable === "worker_income") {
       filtered = filtered.filter((record) => {
-        return (record as WorkerIncome).worker === filters.selectedWorker;
+        const workerName = (record as WorkerIncome).worker || '';
+        return workerName.toLowerCase() === filters.selectedWorker.toLowerCase();
       });
     }
 

@@ -68,6 +68,13 @@ export default function RekapGajiWorker() {
     catatan: ""
   });
 
+  // Helper function to normalize worker names
+  const normalizeWorkerName = (name: string): string => {
+    if (!name || !name.trim()) return '(Unknown)';
+    const trimmed = name.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  };
+
   useEffect(() => {
     fetchWorkers();
     fetchAvailableMonths();
@@ -146,12 +153,6 @@ export default function RekapGajiWorker() {
       let incomeQuery = supabase.from("worker_income").select("*");
       let withdrawalQuery = supabase.from("salary_withdrawals").select("*");
 
-      // Apply worker filter if selected
-      if (selectedWorker) {
-        incomeQuery = incomeQuery.eq("worker", selectedWorker);
-        withdrawalQuery = withdrawalQuery.eq("worker", selectedWorker);
-      }
-
       // Apply month filter if selected
       if (selectedMonth) {
         const startDate = `${selectedMonth}-01`;
@@ -173,19 +174,44 @@ export default function RekapGajiWorker() {
         throw new Error(`Gagal mengambil data pengambilan gaji: ${withdrawalError.message}`);
       }
 
-      setWorkerIncomes(incomeData || []);
-      setSalaryWithdrawals(withdrawalData || []);
+      // Normalize worker names in fetched data
+      const normalizedIncome = (incomeData || []).map(item => ({
+        ...item,
+        worker: normalizeWorkerName(item.worker)
+      }));
+
+      const normalizedWithdrawals = (withdrawalData || []).map(item => ({
+        ...item,
+        worker: normalizeWorkerName(item.worker)
+      }));
+
+      // Apply case-insensitive worker filter
+      let filteredIncome = normalizedIncome;
+      let filteredWithdrawals = normalizedWithdrawals;
+
+      if (selectedWorker) {
+        const normalizedSelectedWorker = normalizeWorkerName(selectedWorker);
+        filteredIncome = normalizedIncome.filter(item => 
+          normalizeWorkerName(item.worker) === normalizedSelectedWorker
+        );
+        filteredWithdrawals = normalizedWithdrawals.filter(item => 
+          normalizeWorkerName(item.worker) === normalizedSelectedWorker
+        );
+      }
+
+      setWorkerIncomes(filteredIncome);
+      setSalaryWithdrawals(filteredWithdrawals);
 
       // Calculate summary with validation
-      const totalIncome = incomeData?.reduce((sum, item) => {
+      const totalIncome = filteredIncome.reduce((sum, item) => {
         const fee = Number(item.fee);
         return sum + (isNaN(fee) ? 0 : fee);
-      }, 0) || 0;
+      }, 0);
       
-      const totalWithdrawals = withdrawalData?.reduce((sum, item) => {
+      const totalWithdrawals = filteredWithdrawals.reduce((sum, item) => {
         const amount = Number(item.amount);
         return sum + (isNaN(amount) ? 0 : amount);
-      }, 0) || 0;
+      }, 0);
       
       const remainingBalance = totalIncome - totalWithdrawals;
 

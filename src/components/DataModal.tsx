@@ -76,11 +76,35 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
       // Prepare data for submission
       const submitData = { ...formData };
       
-      // Convert string numbers to actual numbers
-      if (tableType === "admin_income" || tableType === "expenses") {
+      // Convert string numbers to actual numbers and normalize data
+      if (tableType === "admin_income") {
         submitData.nominal = parseFloat(submitData.nominal);
+        // Normalize code: trim and convert empty to null
+        submitData.code = (submitData.code || '').trim() || null;
       } else if (tableType === "worker_income") {
         submitData.fee = parseFloat(submitData.fee);
+        // Normalize worker name: proper case
+        if (submitData.worker) {
+          const trimmed = submitData.worker.trim();
+          submitData.worker = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+        }
+        // Normalize code
+        submitData.code = (submitData.code || '').trim() || 'NO_CODE';
+        // Normalize jobdesk
+        submitData.jobdesk = (submitData.jobdesk || '').trim() || '(Tanpa jobdesk)';
+        
+        // Validate fee
+        if (isNaN(submitData.fee) || submitData.fee <= 0) {
+          toast({
+            title: "Error",
+            description: "Fee harus berupa angka yang lebih besar dari 0",
+            variant: "destructive"
+          });
+          setSaving(false);
+          return;
+        }
+      } else if (tableType === "expenses") {
+        submitData.nominal = parseFloat(submitData.nominal);
       }
       // Workers table doesn't need numeric conversion
 
@@ -125,6 +149,14 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
   };
 
   const handleInputChange = (field: string, value: string) => {
+    // Real-time normalization for worker name in worker_income table
+    if (tableType === 'worker_income' && field === 'worker' && value) {
+      const trimmed = value.trim();
+      if (trimmed) {
+        value = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+      }
+    }
+    
     setFormData((prev: any) => ({
       ...prev,
       [field]: value

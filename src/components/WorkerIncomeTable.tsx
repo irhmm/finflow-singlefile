@@ -79,6 +79,9 @@ export function WorkerIncomeTable({
     return `Rp ${amount.toLocaleString("id-ID")}`;
   };
 
+  const safeText = (v: any, placeholder = '-') => 
+    (typeof v === 'string' ? v.trim() : v) || placeholder;
+
   const groupByDay = (data: WorkerIncome[]) => {
     return data.reduce((groups, item) => {
       const date = new Date(item.tanggal).toDateString();
@@ -162,39 +165,44 @@ export function WorkerIncomeTable({
     );
   };
 
-  const renderWorkerIncomeRow = (record: WorkerIncome, showDate: boolean = true) => (
-    <TableRow key={record.id} className="hover:bg-muted/40 transition-colors duration-200 group border-b border-border/10">
-      {showDate && (
-        <TableCell className="px-6 py-4 font-medium text-muted-foreground border-r border-border/10">
-          {formatDateShort(record.tanggal)}
+  const renderWorkerIncomeRow = (record: WorkerIncome, showDate: boolean = true) => {
+    const workerName = safeText(record.worker, '(Unknown)');
+    const workerInitial = workerName.charAt(0).toUpperCase();
+    
+    return (
+      <TableRow key={record.id} className="hover:bg-muted/40 transition-colors duration-200 group border-b border-border/10">
+        {showDate && (
+          <TableCell className="px-6 py-4 font-medium text-muted-foreground border-r border-border/10">
+            {formatDateShort(record.tanggal)}
+          </TableCell>
+        )}
+        <TableCell className="px-6 py-4 border-r border-border/10">
+          <Badge variant="secondary" className="bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 border border-[#3b82f6]/20 font-medium">
+            {safeText(record.code, 'NO CODE')}
+          </Badge>
         </TableCell>
-      )}
-      <TableCell className="px-6 py-4 border-r border-border/10">
-        <Badge variant="secondary" className="bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 border border-[#3b82f6]/20 font-medium">
-          {record.code}
-        </Badge>
-      </TableCell>
-      <TableCell className="px-6 py-4 border-r border-border/10">
-        <div className="max-w-[280px] truncate font-medium" title={record.jobdesk}>
-          {record.jobdesk}
-        </div>
-      </TableCell>
-      <TableCell className="px-6 py-4 border-r border-border/10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3b82f6]/20 to-secondary/20 flex items-center justify-center text-sm font-semibold text-[#3b82f6] border border-[#3b82f6]/20">
-            {record.worker && record.worker.length > 0 ? record.worker.charAt(0).toUpperCase() : '?'}
+        <TableCell className="px-6 py-4 border-r border-border/10">
+          <div className="max-w-[280px] truncate font-medium" title={record.jobdesk}>
+            {safeText(record.jobdesk, '(Tanpa jobdesk)')}
           </div>
-          <span className="font-semibold">{record.worker || 'Unknown Worker'}</span>
-        </div>
-      </TableCell>
-      <TableCell className="px-6 py-4 text-right border-r border-border/10">
-        <span className="font-bold text-[#3b82f6] text-base">
-          {formatCurrency(record.fee)}
-        </span>
-      </TableCell>
-      {renderActionButtons(record)}
-    </TableRow>
-  );
+        </TableCell>
+        <TableCell className="px-6 py-4 border-r border-border/10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3b82f6]/20 to-secondary/20 flex items-center justify-center text-sm font-semibold text-[#3b82f6] border border-[#3b82f6]/20">
+              {workerInitial}
+            </div>
+            <span className="font-semibold">{workerName}</span>
+          </div>
+        </TableCell>
+        <TableCell className="px-6 py-4 text-right border-r border-border/10">
+          <span className="font-bold text-[#3b82f6] text-base">
+            {formatCurrency(record.fee || 0)}
+          </span>
+        </TableCell>
+        {renderActionButtons(record)}
+      </TableRow>
+    );
+  };
 
   // Prepare filter data
   const getAvailableCodes = () => {
@@ -202,7 +210,20 @@ export function WorkerIncomeTable({
   };
 
   const getAvailableWorkers = () => {
-    return Array.from(new Set(data.map(record => record.worker).filter(Boolean))).sort();
+    const workerMap = new Map<string, string>();
+    
+    data.forEach(record => {
+      const worker = record.worker || '';
+      if (worker.trim()) {
+        const normalizedKey = worker.toLowerCase();
+        if (!workerMap.has(normalizedKey)) {
+          const properCase = worker.charAt(0).toUpperCase() + worker.slice(1).toLowerCase();
+          workerMap.set(normalizedKey, properCase);
+        }
+      }
+    });
+    
+    return Array.from(workerMap.values()).sort();
   };
 
   const getAvailableMonths = () => {
