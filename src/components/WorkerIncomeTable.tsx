@@ -93,7 +93,7 @@ export function WorkerIncomeTable({
   const groupByMonth = (data: WorkerIncome[]) => {
     return data.reduce((groups, item) => {
       const date = new Date(item.tanggal);
-      const monthYear = `${date.getFullYear()}-${date.getMonth()}`;
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       if (!groups[monthYear]) {
         groups[monthYear] = [];
       }
@@ -110,8 +110,9 @@ export function WorkerIncomeTable({
 
   if (loading) {
     return (
-      <Card className="p-8">
-        <div className="flex items-center justify-center h-32">
+      <Card className="p-8 border-dashed">
+        <div className="flex flex-col items-center justify-center h-32 space-y-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
           <div className="text-muted-foreground animate-pulse">Memuat data pendapatan worker...</div>
         </div>
       </Card>
@@ -124,7 +125,11 @@ export function WorkerIncomeTable({
         <div className="flex flex-col items-center justify-center h-32 space-y-2">
           <Calendar className="h-12 w-12 text-muted-foreground/50" />
           <div className="text-muted-foreground text-lg">Belum ada data pendapatan</div>
-          <div className="text-muted-foreground/70 text-sm">Data akan muncul setelah ditambahkan</div>
+          <div className="text-muted-foreground/70 text-sm">
+            {searchQuery || filters.selectedCode !== "all" || filters.selectedWorker !== "all" || filters.selectedMonth !== "all" 
+              ? "Tidak ada data yang sesuai dengan filter. Coba ubah filter Anda."
+              : "Data akan muncul setelah ditambahkan"}
+          </div>
         </div>
       </Card>
     );
@@ -204,13 +209,13 @@ export function WorkerIncomeTable({
     const months = Array.from(new Set(
       data.map((record) => {
         const date = new Date(record.tanggal);
-        return `${date.getFullYear()}-${date.getMonth()}`;
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       })
     )).sort().reverse();
 
     return months.map(monthYear => {
       const [year, month] = monthYear.split('-');
-      const date = new Date(parseInt(year), parseInt(month));
+      const date = new Date(parseInt(year), parseInt(month) - 1);
       return {
         value: monthYear,
         label: date.toLocaleDateString("id-ID", { month: 'long', year: 'numeric' })

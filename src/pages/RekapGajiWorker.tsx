@@ -74,7 +74,7 @@ export default function RekapGajiWorker() {
   }, []);
 
   useEffect(() => {
-    if (selectedWorker && selectedMonth) {
+    if (selectedWorker || selectedMonth) {
       fetchData();
     }
   }, [selectedWorker, selectedMonth]);
@@ -132,45 +132,78 @@ export default function RekapGajiWorker() {
   };
 
   const fetchData = async () => {
+    if (!selectedWorker && !selectedMonth) {
+      // Clear data if both filters are empty
+      setWorkerIncomes([]);
+      setSalaryWithdrawals([]);
+      setSummary({ totalIncome: 0, totalWithdrawals: 0, remainingBalance: 0 });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Fetch worker income for selected month and worker
-      const startDate = `${selectedMonth}-01`;
-      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
+      // Build query for worker income
+      let incomeQuery = supabase.from("worker_income").select("*");
+      let withdrawalQuery = supabase.from("salary_withdrawals").select("*");
 
-      const { data: incomeData, error: incomeError } = await supabase
-        .from("worker_income")
-        .select("*")
-        .eq("worker", selectedWorker)
-        .gte("tanggal", startDate)
-        .lte("tanggal", endDate)
-        .order("tanggal", { ascending: false });
+      // Apply worker filter if selected
+      if (selectedWorker) {
+        incomeQuery = incomeQuery.eq("worker", selectedWorker);
+        withdrawalQuery = withdrawalQuery.eq("worker", selectedWorker);
+      }
 
-      if (incomeError) throw incomeError;
+      // Apply month filter if selected
+      if (selectedMonth) {
+        const startDate = `${selectedMonth}-01`;
+        const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
+        incomeQuery = incomeQuery.gte("tanggal", startDate).lte("tanggal", endDate);
+        withdrawalQuery = withdrawalQuery.gte("tanggal", startDate).lte("tanggal", endDate);
+      }
 
-      // Fetch salary withdrawals for selected month and worker
-      const { data: withdrawalData, error: withdrawalError } = await supabase
-        .from("salary_withdrawals")
-        .select("*")
-        .eq("worker", selectedWorker)
-        .gte("tanggal", startDate)
-        .lte("tanggal", endDate)
-        .order("tanggal", { ascending: false });
+      // Execute queries
+      const { data: incomeData, error: incomeError } = await incomeQuery.order("tanggal", { ascending: false });
+      if (incomeError) {
+        console.error("Income fetch error:", incomeError);
+        throw new Error(`Gagal mengambil data pendapatan: ${incomeError.message}`);
+      }
 
-      if (withdrawalError) throw withdrawalError;
+      const { data: withdrawalData, error: withdrawalError } = await withdrawalQuery.order("tanggal", { ascending: false });
+      if (withdrawalError) {
+        console.error("Withdrawal fetch error:", withdrawalError);
+        throw new Error(`Gagal mengambil data pengambilan gaji: ${withdrawalError.message}`);
+      }
 
       setWorkerIncomes(incomeData || []);
       setSalaryWithdrawals(withdrawalData || []);
 
-      // Calculate summary
-      const totalIncome = incomeData?.reduce((sum, item) => sum + Number(item.fee), 0) || 0;
-      const totalWithdrawals = withdrawalData?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+      // Calculate summary with validation
+      const totalIncome = incomeData?.reduce((sum, item) => {
+        const fee = Number(item.fee);
+        return sum + (isNaN(fee) ? 0 : fee);
+      }, 0) || 0;
+      
+      const totalWithdrawals = withdrawalData?.reduce((sum, item) => {
+        const amount = Number(item.amount);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0) || 0;
+      
       const remainingBalance = totalIncome - totalWithdrawals;
 
       setSummary({ totalIncome, totalWithdrawals, remainingBalance });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching data:", error);
-      toast.error("Gagal mengambil data");
+      
+      // Provide specific error messages
+      let errorMessage = "Gagal mengambil data";
+      if (error?.message?.includes("JWT")) {
+        errorMessage = "Sesi Anda telah berakhir. Silakan login kembali.";
+      } else if (error?.message?.includes("permission")) {
+        errorMessage = "Anda tidak memiliki akses ke data ini";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -453,7 +486,7 @@ export default function RekapGajiWorker() {
               </Card>
 
               {/* Summary Cards */}
-              {selectedWorker && selectedMonth && (
+              {(selectedWorker || selectedMonth) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
                     <CardContent className="p-6">
@@ -493,8 +526,23 @@ export default function RekapGajiWorker() {
                 </div>
               )}
 
+              {/* Empty State - No Filters Selected */}
+              {!selectedWorker && !selectedMonth && (
+                <Card className="p-12 bg-gradient-to-br from-card to-muted/20 border-dashed">
+                  <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <Calculator className="h-16 w-16 text-muted-foreground/50" />
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">Pilih Filter untuk Melihat Data</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Silakan pilih worker dan/atau bulan pada filter di atas untuk melihat rekap gaji dan pendapatan.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {/* Tables Section */}
-              {selectedWorker && selectedMonth && (
+              {(selectedWorker || selectedMonth) && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Worker Income Table */}
                   <Card className="bg-card/80 backdrop-blur-sm">
@@ -515,12 +563,21 @@ export default function RekapGajiWorker() {
                           <TableBody>
                             {isLoading ? (
                               <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8">Loading...</TableCell>
+                                <TableCell colSpan={4} className="text-center py-8">
+                                  <div className="flex flex-col items-center space-y-2">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                    <span className="text-muted-foreground">Memuat data...</span>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ) : paginatedIncomes.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                  Tidak ada data pendapatan
+                                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                                  <div className="flex flex-col items-center space-y-2">
+                                    <TrendingUp className="h-10 w-10 text-muted-foreground/40" />
+                                    <p className="font-medium">Tidak ada data pendapatan</p>
+                                    <p className="text-sm">Belum ada transaksi untuk periode ini</p>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ) : (
@@ -584,12 +641,21 @@ export default function RekapGajiWorker() {
                           <TableBody>
                             {isLoading ? (
                               <TableRow>
-                                <TableCell colSpan={3} className="text-center py-8">Loading...</TableCell>
+                                <TableCell colSpan={3} className="text-center py-8">
+                                  <div className="flex flex-col items-center space-y-2">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                    <span className="text-muted-foreground">Memuat data...</span>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ) : paginatedWithdrawals.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                  Tidak ada data pengambilan gaji
+                                <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                                  <div className="flex flex-col items-center space-y-2">
+                                    <Wallet className="h-10 w-10 text-muted-foreground/40" />
+                                    <p className="font-medium">Tidak ada data pengambilan gaji</p>
+                                    <p className="text-sm">Belum ada pengambilan untuk periode ini</p>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ) : (

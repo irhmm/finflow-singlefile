@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, LogIn, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { debounce } from "@/lib/debounce";
 
 export type TableType = "admin_income" | "worker_income" | "expenses" | "workers";
 
@@ -101,7 +102,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       const defaultTable = isAdmin ? "admin_income" : "worker_income";
       setActiveTable(defaultTable);
     }
-  }, [isAdmin]);
+  }, [user, userRole, isAdmin]);
   const [data, setData] = useState<DataRecord[]>([]);
   const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,14 +131,29 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         .select("*")
         .order(activeTable === "workers" ? "created_at" : "tanggal", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
+      
       setData(result || []);
       setFilteredData(result || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading data:", error);
+      
+      // Provide specific error messages
+      let errorMessage = "Gagal memuat data";
+      if (error?.message?.includes("JWT")) {
+        errorMessage = "Sesi Anda telah berakhir. Silakan login kembali.";
+      } else if (error?.message?.includes("permission")) {
+        errorMessage = "Anda tidak memiliki akses ke data ini";
+      } else if (error?.code === "PGRST116") {
+        errorMessage = "Data tidak ditemukan atau Anda tidak memiliki akses";
+      }
+      
       toast({
         title: "Error",
-        description: "Gagal memuat data",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -145,9 +161,14 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     }
   };
 
-  // Set up real-time subscription
+  // Set up real-time subscription with debouncing
   useEffect(() => {
     loadData();
+
+    // Create debounced version of loadData to prevent rapid re-fetches
+    const debouncedLoadData = debounce(() => {
+      loadData();
+    }, 300);
 
     const channel = supabase
       .channel(`${activeTable}_changes`)
@@ -159,7 +180,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           table: activeTable
         },
         () => {
-          loadData();
+          debouncedLoadData();
         }
       )
       .subscribe();
@@ -237,7 +258,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     if (filters.selectedMonth && filters.selectedMonth !== "all") {
       filtered = filtered.filter((record) => {
         const date = new Date((record as any).tanggal);
-        const recordMonthYear = `${date.getFullYear()}-${date.getMonth()}`;
+        const recordMonthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         return recordMonthYear === filters.selectedMonth;
       });
     }

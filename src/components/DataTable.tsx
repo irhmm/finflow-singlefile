@@ -91,9 +91,10 @@ export function DataTable({
 
   if (loading) {
     return (
-      <Card className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-muted-foreground">Memuat data...</div>
+      <Card className="p-8 border-dashed">
+        <div className="flex flex-col items-center justify-center h-32 space-y-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          <div className="text-muted-foreground animate-pulse">Memuat data...</div>
         </div>
       </Card>
     );
@@ -101,9 +102,18 @@ export function DataTable({
 
   if (data.length === 0) {
     return (
-      <Card className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-muted-foreground">Tidak ada data</div>
+      <Card className="p-8 bg-gradient-to-br from-card to-muted/20 border-dashed">
+        <div className="flex flex-col items-center justify-center h-32 space-y-2">
+          <div className="text-muted-foreground text-lg">
+            {searchQuery || filters.selectedCode !== "all" || filters.selectedMonth !== "all"
+              ? "Tidak ada data yang sesuai dengan filter"
+              : "Belum ada data"}
+          </div>
+          <div className="text-muted-foreground/70 text-sm">
+            {searchQuery || filters.selectedCode !== "all" || filters.selectedMonth !== "all"
+              ? "Coba ubah atau hapus filter untuk melihat lebih banyak data"
+              : "Data akan muncul setelah ditambahkan"}
+          </div>
         </div>
       </Card>
     );
@@ -229,13 +239,13 @@ export function DataTable({
     const months = Array.from(new Set(
       data.map((record) => {
         const date = new Date((record as any).tanggal);
-        return `${date.getFullYear()}-${date.getMonth()}`;
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       })
     )).sort().reverse();
 
     return months.map(monthYear => {
       const [year, month] = monthYear.split('-');
-      const date = new Date(parseInt(year), parseInt(month));
+      const date = new Date(parseInt(year), parseInt(month) - 1);
       return {
         value: monthYear,
         label: date.toLocaleDateString("id-ID", { month: 'long', year: 'numeric' })
