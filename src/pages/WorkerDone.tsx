@@ -451,7 +451,7 @@ const WorkerDone = () => {
                                   variant="outline"
                                   onClick={() => handleToggleStatus(worker.id, worker.status)}
                                 >
-                                  Toggle
+                                  Done
                                 </Button>
                               </td>
                             </tr>
