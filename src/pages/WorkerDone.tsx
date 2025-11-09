@@ -57,23 +57,44 @@ const WorkerDone = () => {
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
   };
 
-  const calculateWorkerMonthlyIncome = async (workerName: string, month: string) => {
+  // Calculate net income (Total Income - Total Withdrawals)
+  // This ensures Worker Done page syncs with Rekap Gaji Worker
+  const calculateWorkerNetIncome = async (workerName: string, month: string) => {
     const startDate = format(startOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
 
-    const { data, error } = await supabase
+    // Calculate total income from worker_income
+    const { data: incomeData, error: incomeError } = await supabase
       .from('worker_income')
       .select('fee')
       .eq('worker', workerName)
       .gte('tanggal', startDate)
       .lte('tanggal', endDate);
     
-    if (error) {
-      console.error('Error calculating income:', error);
+    if (incomeError) {
+      console.error('Error calculating income:', incomeError);
       return 0;
     }
     
-    return data.reduce((sum, item) => sum + (Number(item.fee) || 0), 0);
+    const totalIncome = incomeData.reduce((sum, item) => sum + (Number(item.fee) || 0), 0);
+
+    // Calculate total withdrawals from salary_withdrawals
+    const { data: withdrawalData, error: withdrawalError } = await supabase
+      .from('salary_withdrawals')
+      .select('amount')
+      .eq('worker', workerName)
+      .gte('tanggal', startDate)
+      .lte('tanggal', endDate);
+    
+    if (withdrawalError) {
+      console.error('Error calculating withdrawals:', withdrawalError);
+      return totalIncome; // Return income only if withdrawal fetch fails
+    }
+    
+    const totalWithdrawals = withdrawalData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    
+    // Return net income (income - withdrawals)
+    return totalIncome - totalWithdrawals;
   };
 
   const fetchData = async () => {
@@ -111,20 +132,20 @@ const WorkerDone = () => {
           return null;
         }
 
-        // Calculate total income
-        const totalIncome = await calculateWorkerMonthlyIncome(workerName, selectedMonth);
+        // Calculate net income (income - withdrawals)
+        const netIncome = await calculateWorkerNetIncome(workerName, selectedMonth);
 
         if (existingStatus) {
           // Update total_income if different
-          if (existingStatus.total_income !== totalIncome) {
+          if (existingStatus.total_income !== netIncome) {
             const { error: updateError } = await supabase
               .from('worker_monthly_status')
-              .update({ total_income: totalIncome })
+              .update({ total_income: netIncome })
               .eq('id', existingStatus.id);
 
             if (updateError) console.error('Error updating income:', updateError);
           }
-          return { ...existingStatus, total_income: totalIncome };
+          return { ...existingStatus, total_income: netIncome };
         } else {
           // Create new status
           const { data: newStatus, error: insertError } = await supabase
@@ -134,7 +155,7 @@ const WorkerDone = () => {
               month: selectedMonth,
               year: selectedYear,
               status: 'proses',
-              total_income: totalIncome,
+              total_income: netIncome,
             })
             .select()
             .single();
@@ -184,7 +205,7 @@ const WorkerDone = () => {
       
       toast({
         title: 'Berhasil',
-        description: `Status diubah menjadi ${newStatus === 'done' ? 'Done' : 'Proses'}`,
+        description: `Status diubah menjadi ${newStatus === 'done' ? 'Dibayar' : 'Belum Dibayar'}`,
       });
     } catch (error) {
       console.error('Error toggling status:', error);
@@ -257,8 +278,8 @@ const WorkerDone = () => {
             {/* Header */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Worker Done Status</h1>
-                <p className="text-muted-foreground mt-1">Kelola status penyelesaian worker per bulan</p>
+                <h1 className="text-3xl font-bold text-foreground">Status Pembayaran Gaji Worker</h1>
+                <p className="text-muted-foreground mt-1">Kelola status pembayaran gaji worker per bulan</p>
               </div>
               <Button onClick={fetchData} disabled={isLoading} size="sm">
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -270,7 +291,7 @@ const WorkerDone = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Done</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Dibayar</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">{totalDone} Workers</div>
@@ -278,7 +299,7 @@ const WorkerDone = () => {
               </Card>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Proses</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Belum Dibayar</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-yellow-600">{totalProses} Workers</div>
@@ -286,7 +307,7 @@ const WorkerDone = () => {
               </Card>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Pendapatan</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Sisa Gaji</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">{formatCurrency(totalIncome)}</div>
@@ -380,7 +401,7 @@ const WorkerDone = () => {
                           <tr className="border-b border-border">
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">No</th>
                             <th className="text-left py-3 px-4 font-medium text-muted-foreground">Worker</th>
-                            <th className="text-right py-3 px-4 font-medium text-muted-foreground">Total Pendapatan</th>
+                            <th className="text-right py-3 px-4 font-medium text-muted-foreground">Sisa Gaji</th>
                             <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
                             <th className="text-center py-3 px-4 font-medium text-muted-foreground">Aksi</th>
                           </tr>
@@ -414,12 +435,12 @@ const WorkerDone = () => {
                                   {worker.status === 'done' ? (
                                     <>
                                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                                      Done
+                                      Dibayar
                                     </>
                                   ) : (
                                     <>
                                       <Clock className="h-3 w-3 mr-1" />
-                                      Proses
+                                      Belum Dibayar
                                     </>
                                   )}
                                 </Badge>
