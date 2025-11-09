@@ -251,7 +251,7 @@ const WorkerDone = () => {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <AppSidebar activeTable="worker_done" onTableChange={() => {}} />
+        <AppSidebar activeTable={"worker_done" as any} onTableChange={() => {}} />
         <main className="flex-1 p-6 bg-background">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
