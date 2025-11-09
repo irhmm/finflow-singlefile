@@ -6,14 +6,16 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
   requireSuperAdmin?: boolean;
+  requireCanEdit?: boolean;
 }
 
 export function ProtectedRoute({ 
   children, 
   requireAdmin = false, 
-  requireSuperAdmin = false 
+  requireSuperAdmin = false,
+  requireCanEdit = false
 }: ProtectedRouteProps) {
-  const { user, loading, isAdmin, isSuperAdmin } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin, canEdit } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,12 +33,18 @@ export function ProtectedRoute({
       return;
     }
 
+    if (requireCanEdit && !canEdit) {
+      // Requires edit permission but user doesn't have it
+      navigate('/');
+      return;
+    }
+
     if (requireAdmin && !isAdmin && !isSuperAdmin) {
       // Requires admin but user isn't admin or super admin
       navigate('/');
       return;
     }
-  }, [user, loading, isAdmin, isSuperAdmin, requireAdmin, requireSuperAdmin, navigate]);
+  }, [user, loading, isAdmin, isSuperAdmin, canEdit, requireAdmin, requireSuperAdmin, requireCanEdit, navigate]);
 
   if (loading) {
     return (
@@ -51,6 +59,10 @@ export function ProtectedRoute({
   }
 
   if (requireSuperAdmin && !isSuperAdmin) {
+    return null; // Will redirect in useEffect
+  }
+
+  if (requireCanEdit && !canEdit) {
     return null; // Will redirect in useEffect
   }
 

@@ -50,7 +50,7 @@ function AppContent() {
           } />
           <Route path="/rekap-gaji-worker" element={<RekapGajiWorker />} />
           <Route path="/worker-done" element={
-            <ProtectedRoute requireAdmin={true}>
+            <ProtectedRoute requireCanEdit={true}>
               <WorkerDone />
             </ProtectedRoute>
           } />

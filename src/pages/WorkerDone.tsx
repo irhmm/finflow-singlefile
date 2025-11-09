@@ -26,7 +26,7 @@ interface WorkerMonthlyStatus {
 }
 
 const WorkerDone = () => {
-  const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
+  const { user, canEdit, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -40,16 +40,21 @@ const WorkerDone = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    if (!authLoading && (!user || (!isAdmin && !isSuperAdmin))) {
-      navigate('/admin-login');
+    if (!authLoading && (!user || !canEdit)) {
+      toast({
+        title: 'Akses Ditolak',
+        description: 'Anda tidak memiliki izin untuk mengakses halaman ini',
+        variant: 'destructive',
+      });
+      navigate('/');
     }
-  }, [user, isAdmin, isSuperAdmin, authLoading, navigate]);
+  }, [user, canEdit, authLoading, navigate, toast]);
 
   useEffect(() => {
-    if (user && (isAdmin || isSuperAdmin)) {
+    if (user && canEdit) {
       fetchData();
     }
-  }, [selectedMonth, selectedYear, user, isAdmin, isSuperAdmin]);
+  }, [selectedMonth, selectedYear, user, canEdit]);
 
   const normalizeWorkerName = (name: string): string => {
     if (!name || !name.trim()) return '(Unknown)';
