@@ -185,6 +185,39 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_monthly_status: {
+        Row: {
+          created_at: string | null
+          id: string
+          month: string
+          status: string
+          total_income: number | null
+          updated_at: string | null
+          worker_name: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          month: string
+          status?: string
+          total_income?: number | null
+          updated_at?: string | null
+          worker_name: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          month?: string
+          status?: string
+          total_income?: number | null
+          updated_at?: string | null
+          worker_name?: string
+          year?: number
+        }
+        Relationships: []
+      }
       workers: {
         Row: {
           created_at: string | null
@@ -223,14 +256,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_current_user_highest_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_user_highest_role: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

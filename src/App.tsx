@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
 import RekapGajiWorker from "./pages/RekapGajiWorker";
+import WorkerDone from "./pages/WorkerDone";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,11 @@ function AppContent() {
             </ProtectedRoute>
           } />
           <Route path="/rekap-gaji-worker" element={<RekapGajiWorker />} />
+          <Route path="/worker-done" element={
+            <ProtectedRoute requireAdmin={true}>
+              <WorkerDone />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
