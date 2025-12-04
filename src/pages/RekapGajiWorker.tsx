@@ -266,10 +266,8 @@ export default function RekapGajiWorker() {
       setIsDialogOpen(false);
       setFormData({ worker: "", amount: "", catatan: "" });
       
-      // Refresh data if the added withdrawal is for the currently selected worker
-      if (formData.worker === selectedWorker) {
-        fetchData();
-      }
+      // Always refresh data after adding withdrawal
+      fetchData();
     } catch (error) {
       console.error("Error adding salary withdrawal:", error);
       toast.error("Gagal menambahkan pengambilan gaji");
