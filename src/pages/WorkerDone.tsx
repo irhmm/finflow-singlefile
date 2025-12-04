@@ -103,7 +103,11 @@ const WorkerDone = () => {
   const normalizeWorkerName = (name: string): string => {
     if (!name || !name.trim()) return '(Unknown)';
     const trimmed = name.trim();
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    // Capitalize first letter of EACH word for proper name handling
+    return trimmed
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   // Calculate net income (Total Income - Total Withdrawals)
@@ -112,11 +116,11 @@ const WorkerDone = () => {
     const startDate = format(startOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
 
-    // Calculate total income from worker_income
+    // Calculate total income from worker_income (case-insensitive query)
     const { data: incomeData, error: incomeError } = await supabase
       .from('worker_income')
       .select('fee')
-      .eq('worker', workerName)
+      .ilike('worker', workerName)
       .gte('tanggal', startDate)
       .lte('tanggal', endDate);
     
@@ -127,11 +131,11 @@ const WorkerDone = () => {
     
     const totalIncome = incomeData.reduce((sum, item) => sum + (Number(item.fee) || 0), 0);
 
-    // Calculate total withdrawals from salary_withdrawals
+    // Calculate total withdrawals from salary_withdrawals (case-insensitive query)
     const { data: withdrawalData, error: withdrawalError } = await supabase
       .from('salary_withdrawals')
       .select('amount')
-      .eq('worker', workerName)
+      .ilike('worker', workerName)
       .gte('tanggal', startDate)
       .lte('tanggal', endDate);
     

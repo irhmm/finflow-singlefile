@@ -68,11 +68,14 @@ export default function RekapGajiWorker() {
     catatan: ""
   });
 
-  // Helper function to normalize worker names
+  // Helper function to normalize worker names - capitalize first letter of EACH word
   const normalizeWorkerName = (name: string): string => {
     if (!name || !name.trim()) return '(Unknown)';
     const trimmed = name.trim();
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    return trimmed
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   useEffect(() => {
@@ -244,11 +247,14 @@ export default function RekapGajiWorker() {
     }
 
     try {
+      // Normalize worker name before saving to ensure consistency
+      const normalizedWorker = normalizeWorkerName(formData.worker);
+      
       const { error } = await supabase
         .from("salary_withdrawals")
         .insert([
           {
-            worker: formData.worker,
+            worker: normalizedWorker,
             amount: Number(formData.amount),
             catatan: formData.catatan || null
           }
