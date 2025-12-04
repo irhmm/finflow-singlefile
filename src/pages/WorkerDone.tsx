@@ -224,8 +224,13 @@ const WorkerDone = () => {
 
       const workerStatuses = (await Promise.all(workerStatusPromises)).filter(Boolean) as WorkerMonthlyStatus[];
       
-      // Sort by worker name
-      workerStatuses.sort((a, b) => a.worker_name.localeCompare(b.worker_name));
+      // Sort by status first (proses/unpaid first, done/paid last), then by name
+      workerStatuses.sort((a, b) => {
+        if (a.status !== b.status) {
+          return a.status === 'proses' ? -1 : 1;
+        }
+        return a.worker_name.localeCompare(b.worker_name);
+      });
       
       setWorkers(workerStatuses);
       setCurrentPage(1); // Reset to first page when data changes
@@ -252,10 +257,19 @@ const WorkerDone = () => {
       
       if (error) throw error;
       
-      // Update local state
-      setWorkers(prev => prev.map(w => 
-        w.id === id ? { ...w, status: newStatus } : w
-      ));
+      // Update local state and re-sort
+      setWorkers(prev => {
+        const updated = prev.map(w => 
+          w.id === id ? { ...w, status: newStatus as 'done' | 'proses' } : w
+        );
+        // Re-sort: proses first, done last, then alphabetically
+        return updated.sort((a, b) => {
+          if (a.status !== b.status) {
+            return a.status === 'proses' ? -1 : 1;
+          }
+          return a.worker_name.localeCompare(b.worker_name);
+        });
+      });
       
       toast({
         title: 'Berhasil',
@@ -293,7 +307,10 @@ const WorkerDone = () => {
   // Statistics
   const totalDone = filteredWorkers.filter(w => w.status === 'done').length;
   const totalProses = filteredWorkers.filter(w => w.status === 'proses').length;
-  const totalIncome = filteredWorkers.reduce((sum, w) => sum + Number(w.total_income || 0), 0);
+  // Only calculate total from workers who haven't been paid yet
+  const totalIncome = filteredWorkers
+    .filter(w => w.status === 'proses')
+    .reduce((sum, w) => sum + Number(w.total_income || 0), 0);
 
   if (authLoading) {
     return (
@@ -433,8 +450,10 @@ const WorkerDone = () => {
                                   <span className="font-medium text-foreground">{worker.worker_name}</span>
                                 </div>
                               </td>
-                              <td className="py-4 px-4 text-right font-semibold text-foreground">
-                                {formatCurrency(Number(worker.total_income || 0))}
+                              <td className={`py-4 px-4 text-right font-semibold ${worker.status === 'done' ? 'text-green-600' : 'text-foreground'}`}>
+                                {worker.status === 'done' 
+                                  ? formatCurrency(0) 
+                                  : formatCurrency(Number(worker.total_income || 0))}
                               </td>
                               <td className="py-4 px-4 text-center">
                                 <Badge
