@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import { CheckCircle2, Clock, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +26,11 @@ interface WorkerMonthlyStatus {
   updated_at: string;
 }
 
+interface MonthOption {
+  value: string;
+  label: string;
+}
+
 const WorkerDone = () => {
   const { user, canEdit, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -32,8 +38,8 @@ const WorkerDone = () => {
   
   const [workers, setWorkers] = useState<WorkerMonthlyStatus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [availableMonths, setAvailableMonths] = useState<MonthOption[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -50,11 +56,49 @@ const WorkerDone = () => {
     }
   }, [user, canEdit, authLoading, navigate, toast]);
 
+  // Fetch available months from database
+  const fetchAvailableMonths = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('worker_income')
+        .select('tanggal')
+        .order('tanggal', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Extract unique months from data
+      const uniqueMonths = Array.from(new Set(
+        data?.map(item => format(new Date(item.tanggal), 'yyyy-MM')) || []
+      )).sort().reverse();
+      
+      // Convert to options format
+      const monthOptions = uniqueMonths.map(month => ({
+        value: month,
+        label: format(new Date(`${month}-01`), 'MMMM yyyy', { locale: idLocale })
+      }));
+      
+      setAvailableMonths(monthOptions);
+      
+      // Auto-select the most recent month that has data
+      if (monthOptions.length > 0 && !selectedMonth) {
+        setSelectedMonth(monthOptions[0].value);
+      }
+    } catch (error) {
+      console.error('Error fetching available months:', error);
+    }
+  };
+
   useEffect(() => {
     if (user && canEdit) {
+      fetchAvailableMonths();
+    }
+  }, [user, canEdit]);
+
+  useEffect(() => {
+    if (user && canEdit && selectedMonth) {
       fetchData();
     }
-  }, [selectedMonth, selectedYear, user, canEdit]);
+  }, [selectedMonth, user, canEdit]);
 
   const normalizeWorkerName = (name: string): string => {
     if (!name || !name.trim()) return '(Unknown)';
@@ -153,12 +197,13 @@ const WorkerDone = () => {
           return { ...existingStatus, total_income: netIncome };
         } else {
           // Create new status
+          const year = parseInt(selectedMonth.split('-')[0]);
           const { data: newStatus, error: insertError } = await supabase
             .from('worker_monthly_status')
             .insert({
               worker_name: workerName,
               month: selectedMonth,
-              year: selectedYear,
+              year: year,
               status: 'proses',
               total_income: netIncome,
             })
@@ -233,26 +278,6 @@ const WorkerDone = () => {
   const endIndex = startIndex + itemsPerPage;
   const paginatedWorkers = filteredWorkers.slice(startIndex, endIndex);
 
-  // Generate year options (from 2020 to current year + 1)
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: currentYear - 2019 + 1 }, (_, i) => 2020 + i);
-
-  // Generate month options
-  const monthOptions = [
-    { value: '01', label: 'Januari' },
-    { value: '02', label: 'Februari' },
-    { value: '03', label: 'Maret' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'Mei' },
-    { value: '06', label: 'Juni' },
-    { value: '07', label: 'Juli' },
-    { value: '08', label: 'Agustus' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'Oktober' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'Desember' },
-  ];
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -325,45 +350,24 @@ const WorkerDone = () => {
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1">
-                    <label className="text-sm font-medium mb-2 block">Bulan</label>
+                    <label className="text-sm font-medium mb-2 block">Periode</label>
                     <Select
-                      value={selectedMonth.split('-')[1]}
-                      onValueChange={(month) => {
-                        setSelectedMonth(`${selectedYear}-${month}`);
-                      }}
+                      value={selectedMonth}
+                      onValueChange={(value) => setSelectedMonth(value)}
                     >
                       <SelectTrigger className="bg-background">
-                        <SelectValue />
+                        <SelectValue placeholder="Pilih periode" />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        {monthOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-sm font-medium mb-2 block">Tahun</label>
-                    <Select
-                      value={selectedYear.toString()}
-                      onValueChange={(year) => {
-                        const newYear = parseInt(year);
-                        setSelectedYear(newYear);
-                        const currentMonth = selectedMonth.split('-')[1];
-                        setSelectedMonth(`${newYear}-${currentMonth}`);
-                      }}
-                    >
-                      <SelectTrigger className="bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background z-50">
-                        {yearOptions.map((year) => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        ))}
+                        {availableMonths.length === 0 ? (
+                          <SelectItem value="no-data" disabled>Tidak ada data</SelectItem>
+                        ) : (
+                          availableMonths.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
