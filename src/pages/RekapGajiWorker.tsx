@@ -67,6 +67,10 @@ export default function RekapGajiWorker() {
     amount: "",
     catatan: ""
   });
+  
+  // Balance validation state for form
+  const [selectedWorkerBalance, setSelectedWorkerBalance] = useState<number | null>(null);
+  const [isCalculatingBalance, setIsCalculatingBalance] = useState(false);
 
   // Helper function to normalize worker names - capitalize first letter of EACH word
   const normalizeWorkerName = (name: string): string => {
@@ -238,6 +242,37 @@ export default function RekapGajiWorker() {
     }
   };
 
+  // Calculate balance when worker is selected in form
+  const calculateWorkerBalance = async (workerName: string) => {
+    if (!workerName || !selectedMonth) {
+      setSelectedWorkerBalance(null);
+      return;
+    }
+    
+    setIsCalculatingBalance(true);
+    try {
+      const normalizedWorker = normalizeWorkerName(workerName);
+      const startDate = `${selectedMonth}-01`;
+      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
+      
+      // Fetch income and withdrawals in parallel
+      const [incomeRes, withdrawalRes] = await Promise.all([
+        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate),
+        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate)
+      ]);
+      
+      const totalIncome = incomeRes.data?.reduce((sum, item) => sum + Number(item.fee || 0), 0) || 0;
+      const totalWithdrawals = withdrawalRes.data?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0;
+      
+      setSelectedWorkerBalance(totalIncome - totalWithdrawals);
+    } catch (error) {
+      console.error("Error calculating balance:", error);
+      setSelectedWorkerBalance(null);
+    } finally {
+      setIsCalculatingBalance(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -246,16 +281,42 @@ export default function RekapGajiWorker() {
       return;
     }
 
+    const withdrawalAmount = Number(formData.amount);
+    
+    // Validate amount is positive
+    if (withdrawalAmount <= 0) {
+      toast.error("Jumlah pengambilan harus lebih dari 0");
+      return;
+    }
+
     try {
-      // Normalize worker name before saving to ensure consistency
       const normalizedWorker = normalizeWorkerName(formData.worker);
+      
+      // Server-side validation: Calculate current remaining balance
+      const startDate = `${selectedMonth}-01`;
+      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
+      
+      const [incomeRes, withdrawalRes] = await Promise.all([
+        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate),
+        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate)
+      ]);
+      
+      const totalIncome = incomeRes.data?.reduce((sum, item) => sum + Number(item.fee || 0), 0) || 0;
+      const totalWithdrawals = withdrawalRes.data?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0;
+      const remainingBalance = totalIncome - totalWithdrawals;
+      
+      // Prevent withdrawal if it exceeds remaining balance
+      if (withdrawalAmount > remainingBalance) {
+        toast.error(`Pengambilan melebihi sisa gaji! Sisa gaji ${normalizedWorker}: ${formatCurrency(remainingBalance)}`, { duration: 5000 });
+        return;
+      }
       
       const { error } = await supabase
         .from("salary_withdrawals")
         .insert([
           {
             worker: normalizedWorker,
-            amount: Number(formData.amount),
+            amount: withdrawalAmount,
             catatan: formData.catatan || null
           }
         ]);
@@ -265,6 +326,7 @@ export default function RekapGajiWorker() {
       toast.success("Pengambilan gaji berhasil ditambahkan!");
       setIsDialogOpen(false);
       setFormData({ worker: "", amount: "", catatan: "" });
+      setSelectedWorkerBalance(null);
       
       // Always refresh data after adding withdrawal
       fetchData();
@@ -429,7 +491,16 @@ export default function RekapGajiWorker() {
 
                     {canWrite && (
                       <div className="flex items-end">
-                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <Dialog 
+                          open={isDialogOpen} 
+                          onOpenChange={(open) => {
+                            setIsDialogOpen(open);
+                            if (!open) {
+                              setSelectedWorkerBalance(null);
+                              setFormData({ worker: "", amount: "", catatan: "" });
+                            }
+                          }}
+                        >
                           <DialogTrigger asChild>
                             <Button className="w-full bg-primary hover:bg-primary/90">
                               <Plus className="h-4 w-4 mr-2" />
@@ -466,6 +537,7 @@ export default function RekapGajiWorker() {
                                               value={worker}
                                               onSelect={(currentValue) => {
                                                 setFormData(prev => ({ ...prev, worker: currentValue }));
+                                                calculateWorkerBalance(currentValue);
                                               }}
                                             >
                                               <Check
@@ -484,6 +556,28 @@ export default function RekapGajiWorker() {
                                 </Popover>
                               </div>
                               
+                              {/* Balance display */}
+                              {isCalculatingBalance && (
+                                <div className="p-3 rounded-lg bg-muted border">
+                                  <span className="text-sm text-muted-foreground">Menghitung sisa gaji...</span>
+                                </div>
+                              )}
+                              {!isCalculatingBalance && selectedWorkerBalance !== null && (
+                                <div className={`p-3 rounded-lg ${selectedWorkerBalance <= 0 ? 'bg-destructive/10 border border-destructive/30' : 'bg-green-50 border border-green-200'}`}>
+                                  <div className="flex items-center gap-2">
+                                    <Wallet className={`h-4 w-4 ${selectedWorkerBalance <= 0 ? 'text-destructive' : 'text-green-600'}`} />
+                                    <span className={`text-sm font-medium ${selectedWorkerBalance <= 0 ? 'text-destructive' : 'text-green-700'}`}>
+                                      Sisa Gaji Tersedia: {formatCurrency(selectedWorkerBalance)}
+                                    </span>
+                                  </div>
+                                  {selectedWorkerBalance <= 0 && (
+                                    <p className="text-xs text-destructive mt-1">
+                                      ⚠️ Worker ini tidak memiliki sisa gaji untuk diambil
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              
                               <div className="space-y-2">
                                 <Label htmlFor="amount">Jumlah</Label>
                                 <Input
@@ -492,6 +586,11 @@ export default function RekapGajiWorker() {
                                   value={formData.amount}
                                   onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                                 />
+                                {formData.amount && selectedWorkerBalance !== null && Number(formData.amount) > selectedWorkerBalance && (
+                                  <p className="text-xs text-destructive">
+                                    ⚠️ Jumlah melebihi sisa gaji ({formatCurrency(selectedWorkerBalance)})
+                                  </p>
+                                )}
                               </div>
                               
                               <div className="space-y-2">
@@ -503,7 +602,18 @@ export default function RekapGajiWorker() {
                                 />
                               </div>
                               
-                              <Button type="submit" className="w-full">
+                              <Button 
+                                type="submit" 
+                                className="w-full"
+                                disabled={
+                                  !formData.worker || 
+                                  !formData.amount || 
+                                  selectedWorkerBalance === null ||
+                                  selectedWorkerBalance <= 0 ||
+                                  Number(formData.amount) <= 0 ||
+                                  Number(formData.amount) > selectedWorkerBalance
+                                }
+                              >
                                 Simpan
                               </Button>
                             </form>
