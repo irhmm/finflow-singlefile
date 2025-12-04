@@ -45,6 +45,7 @@ const WorkerDone = () => {
   
   const itemsPerPage = 10;
 
+
   useEffect(() => {
     if (!authLoading && (!user || !canEdit)) {
       toast({
@@ -245,6 +246,31 @@ const WorkerDone = () => {
       setIsLoading(false);
     }
   };
+
+  // Real-time subscription to salary_withdrawals for auto-sync with RekapGajiWorker
+  useEffect(() => {
+    if (!user || !canEdit || !selectedMonth) return;
+
+    const channel = supabase
+      .channel('worker-done-salary-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'salary_withdrawals'
+        },
+        () => {
+          // Re-fetch data when salary_withdrawals changes
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, canEdit, selectedMonth]);
 
   const handleToggleStatus = async (id: string, currentStatus: 'done' | 'proses') => {
     const newStatus = currentStatus === 'done' ? 'proses' : 'done';
