@@ -1,4 +1,4 @@
-import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck, Wallet, CheckCircle2 } from "lucide-react";
+import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck, Wallet, CheckCircle2, Briefcase } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import {
 import { TableType } from "./FinancialDashboard";
 
 interface AppSidebarProps {
-  activeTable: TableType | "laporan" | "rekap_gaji" | "worker_done";
+  activeTable: TableType | "laporan" | "rekap_gaji" | "worker_done" | "gaji_admin";
   onTableChange: (table: TableType) => void;
 }
 
@@ -72,6 +72,15 @@ const navigationItems = [
     path: "/worker-done",
     isRoute: true,
     publicAccess: false
+  },
+  {
+    title: "Gaji Admin",
+    icon: Briefcase,
+    table: "gaji_admin" as any,
+    path: "/gaji-admin",
+    isRoute: true,
+    publicAccess: false,
+    superAdminOnly: true
   }
 ];
 
@@ -129,7 +138,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
     }
     
     if (userRole === 'super_admin') {
-      // Super admin: all tables
+      // Super admin: all tables including gaji_admin
       return navigationItems;
     }
     
