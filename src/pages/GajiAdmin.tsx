@@ -10,7 +10,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Calculator, Copy, Save, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Calculator, Copy, Save, CheckCircle2, Clock, AlertCircle, TrendingUp, DollarSign, Users } from 'lucide-react';
 
 interface AdminTarget {
   id?: string;
@@ -112,6 +112,50 @@ export default function GajiAdmin() {
     }
     return years;
   }, [currentDate]);
+
+  // Calculate real-time bonus for each admin based on current editingTargets and adminIncomes
+  const calculatedRecords = useMemo(() => {
+    return adminCodes.map(code => {
+      const target = editingTargets[code];
+      const income = adminIncomes.find(i => i.code === code);
+      const actualIncome = income?.total || 0;
+      const targetOmset = target?.target_omset || 0;
+
+      const result = calculateBonus(targetOmset, actualIncome, {
+        bonus_80: target?.bonus_80_percent || 3,
+        bonus_100: target?.bonus_100_percent || 4,
+        bonus_150: target?.bonus_150_percent || 5
+      });
+
+      // Check if saved in salary history
+      const savedRecord = salaryRecords.find(r => r.admin_code === code);
+
+      return {
+        admin_code: code,
+        target_omset: targetOmset,
+        actual_income: actualIncome,
+        achievement_percent: result.achievement,
+        bonus_percent: result.percent,
+        bonus_amount: result.amount,
+        status: savedRecord?.status || 'pending',
+        paid_at: savedRecord?.paid_at,
+        isSaved: !!savedRecord
+      };
+    });
+  }, [adminCodes, editingTargets, adminIncomes, salaryRecords]);
+
+  // Summary statistics
+  const totalAdminIncome = useMemo(() => {
+    return adminIncomes.reduce((sum, income) => sum + income.total, 0);
+  }, [adminIncomes]);
+
+  const totalBonus = useMemo(() => {
+    return calculatedRecords.reduce((sum, r) => sum + r.bonus_amount, 0);
+  }, [calculatedRecords]);
+
+  const pendingCount = useMemo(() => {
+    return calculatedRecords.filter(r => r.status === 'pending').length;
+  }, [calculatedRecords]);
 
   // Fetch admin codes from admin_income
   const fetchAdminCodes = async () => {
@@ -306,34 +350,22 @@ export default function GajiAdmin() {
     toast.success('Target berhasil di-copy dari bulan sebelumnya');
   };
 
-  const calculateAndSaveRecords = async () => {
+  const saveRekapGaji = async () => {
     setSaving(true);
     try {
-      for (const code of adminCodes) {
-        const target = targetSettings.find(t => t.admin_code === code);
-        const income = adminIncomes.find(i => i.code === code);
-
-        const targetOmset = target?.target_omset || 0;
-        const actualIncome = income?.total || 0;
-
-        const result = calculateBonus(targetOmset, actualIncome, {
-          bonus_80: target?.bonus_80_percent || 3,
-          bonus_100: target?.bonus_100_percent || 4,
-          bonus_150: target?.bonus_150_percent || 5
-        });
-
+      for (const record of calculatedRecords) {
         const { error } = await supabase
           .from('admin_salary_history')
           .upsert({
-            admin_code: code,
+            admin_code: record.admin_code,
             month: selectedMonth,
             year: selectedYear,
-            target_omset: targetOmset,
-            actual_income: actualIncome,
-            achievement_percent: result.achievement,
-            bonus_percent: result.percent,
-            bonus_amount: result.amount,
-            status: 'pending'
+            target_omset: record.target_omset,
+            actual_income: record.actual_income,
+            achievement_percent: record.achievement_percent,
+            bonus_percent: record.bonus_percent,
+            bonus_amount: record.bonus_amount,
+            status: record.status
           }, {
             onConflict: 'admin_code,month,year'
           });
@@ -341,11 +373,11 @@ export default function GajiAdmin() {
         if (error) throw error;
       }
 
-      toast.success('Rekap gaji berhasil dihitung');
+      toast.success('Rekap gaji berhasil disimpan');
       await fetchSalaryRecords();
     } catch (error) {
-      console.error('Error calculating records:', error);
-      toast.error('Gagal menghitung rekap gaji');
+      console.error('Error saving records:', error);
+      toast.error('Gagal menyimpan rekap gaji');
     } finally {
       setSaving(false);
     }
@@ -381,11 +413,8 @@ export default function GajiAdmin() {
     if (achievement >= 150) return 'text-green-600 font-bold';
     if (achievement >= 100) return 'text-blue-600 font-semibold';
     if (achievement >= 80) return 'text-yellow-600';
-    return 'text-red-500';
+    return 'text-muted-foreground';
   };
-
-  const totalBonus = salaryRecords.reduce((sum, r) => sum + r.bonus_amount, 0);
-  const pendingCount = salaryRecords.filter(r => r.status === 'pending').length;
 
   return (
     <SidebarProvider>
@@ -395,6 +424,49 @@ export default function GajiAdmin() {
           <div className="flex items-center gap-4 mb-6">
             <SidebarTrigger />
             <h1 className="text-2xl font-bold text-foreground">Gaji Admin</h1>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <DollarSign className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Pendapatan Admin</p>
+                    <p className="text-xl font-bold text-foreground">{formatCurrency(totalAdminIncome)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-500/10 rounded-lg">
+                    <TrendingUp className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Bonus</p>
+                    <p className="text-xl font-bold text-green-600">{formatCurrency(totalBonus)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-yellow-500/10 rounded-lg">
+                    <Users className="w-6 h-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Admin Pending</p>
+                    <p className="text-xl font-bold text-foreground">{pendingCount} Admin</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Period Selector */}
@@ -429,10 +501,10 @@ export default function GajiAdmin() {
               <TabsTrigger value="recap">Rekap Gaji</TabsTrigger>
             </TabsList>
 
-            {/* Tab 1: Setting Target */}
+            {/* Tab 1: Setting Target with Real-time Calculation */}
             <TabsContent value="settings">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                   <CardTitle>Setting Target Admin - {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={copyFromPreviousMonth}>
@@ -461,13 +533,16 @@ export default function GajiAdmin() {
                             <TableHead>Bonus 80%</TableHead>
                             <TableHead>Bonus 100%</TableHead>
                             <TableHead>Bonus 150%</TableHead>
-                            <TableHead>Pendapatan Aktual</TableHead>
+                            <TableHead className="text-right">Pendapatan</TableHead>
+                            <TableHead className="text-right">Pencapaian</TableHead>
+                            <TableHead className="text-right">Bonus %</TableHead>
+                            <TableHead className="text-right">Nominal Bonus</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {adminCodes.map(code => {
                             const target = editingTargets[code];
-                            const income = adminIncomes.find(i => i.code === code);
+                            const calculated = calculatedRecords.find(r => r.admin_code === code);
                             const hasTarget = targetSettings.some(t => t.admin_code === code);
 
                             return (
@@ -521,7 +596,16 @@ export default function GajiAdmin() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {formatCurrency(income?.total || 0)}
+                                  {formatCurrency(calculated?.actual_income || 0)}
+                                </TableCell>
+                                <TableCell className={`text-right ${getAchievementColor(calculated?.achievement_percent || 0)}`}>
+                                  {(calculated?.achievement_percent || 0).toFixed(1)}%
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {calculated?.bonus_percent || 0}%
+                                </TableCell>
+                                <TableCell className="text-right font-bold text-green-600">
+                                  {formatCurrency(calculated?.bonus_amount || 0)}
                                 </TableCell>
                               </TableRow>
                             );
@@ -534,10 +618,10 @@ export default function GajiAdmin() {
               </Card>
             </TabsContent>
 
-            {/* Tab 2: Rekap Gaji */}
+            {/* Tab 2: Rekap Gaji - Real-time display */}
             <TabsContent value="recap">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                   <div>
                     <CardTitle>Rekap Gaji Admin - {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -545,17 +629,17 @@ export default function GajiAdmin() {
                       {pendingCount > 0 && <span className="ml-4">({pendingCount} pending)</span>}
                     </p>
                   </div>
-                  <Button onClick={calculateAndSaveRecords} disabled={saving}>
-                    <Calculator className="w-4 h-4 mr-2" /> Hitung Ulang
+                  <Button onClick={saveRekapGaji} disabled={saving}>
+                    <Save className="w-4 h-4 mr-2" /> Simpan Rekap
                   </Button>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
                     <div className="text-center py-8">Memuat data...</div>
-                  ) : salaryRecords.length === 0 ? (
+                  ) : calculatedRecords.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Calculator className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      Belum ada rekap. Klik "Hitung Ulang" untuk menghitung bonus.
+                      Tidak ada data admin untuk periode ini
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -573,9 +657,14 @@ export default function GajiAdmin() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {salaryRecords.map(record => (
-                            <TableRow key={record.id}>
-                              <TableCell className="font-medium">{record.admin_code}</TableCell>
+                          {calculatedRecords.map(record => (
+                            <TableRow key={record.admin_code}>
+                              <TableCell className="font-medium">
+                                {record.admin_code}
+                                {!record.isSaved && (
+                                  <Badge variant="outline" className="ml-2 text-xs">Belum Disimpan</Badge>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right">{formatCurrency(record.target_omset)}</TableCell>
                               <TableCell className="text-right">{formatCurrency(record.actual_income)}</TableCell>
                               <TableCell className={`text-right ${getAchievementColor(record.achievement_percent)}`}>
@@ -587,7 +676,7 @@ export default function GajiAdmin() {
                               </TableCell>
                               <TableCell>{getStatusBadge(record.status)}</TableCell>
                               <TableCell>
-                                {record.status !== 'paid' && (
+                                {record.isSaved && record.status !== 'paid' && (
                                   <Button
                                     size="sm"
                                     variant="outline"
