@@ -10,14 +10,12 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Calculator, Copy, Save, CheckCircle2, Clock, AlertCircle, TrendingUp, DollarSign, Users } from 'lucide-react';
+import { Save, CheckCircle2, Clock, AlertCircle, TrendingUp, DollarSign, Users, Settings } from 'lucide-react';
 
-interface AdminTarget {
+interface AdminTargetPermanent {
   id?: string;
   admin_code: string;
   target_omset: number;
-  month: string;
-  year: number;
   bonus_80_percent: number;
   bonus_100_percent: number;
   bonus_150_percent: number;
@@ -99,9 +97,9 @@ export default function GajiAdmin() {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [adminCodes, setAdminCodes] = useState<string[]>([]);
   const [adminIncomes, setAdminIncomes] = useState<AdminIncome[]>([]);
-  const [targetSettings, setTargetSettings] = useState<AdminTarget[]>([]);
+  const [permanentSettings, setPermanentSettings] = useState<AdminTargetPermanent[]>([]);
   const [salaryRecords, setSalaryRecords] = useState<AdminSalaryRecord[]>([]);
-  const [editingTargets, setEditingTargets] = useState<Record<string, AdminTarget>>({});
+  const [editingSettings, setEditingSettings] = useState<Record<string, AdminTargetPermanent>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -113,18 +111,18 @@ export default function GajiAdmin() {
     return years;
   }, [currentDate]);
 
-  // Calculate real-time bonus for each admin based on current editingTargets and adminIncomes
+  // Calculate real-time bonus for each admin based on permanent settings and monthly income
   const calculatedRecords = useMemo(() => {
     return adminCodes.map(code => {
-      const target = editingTargets[code];
+      const setting = permanentSettings.find(s => s.admin_code === code);
       const income = adminIncomes.find(i => i.code === code);
       const actualIncome = income?.total || 0;
-      const targetOmset = target?.target_omset || 0;
+      const targetOmset = setting?.target_omset || 0;
 
       const result = calculateBonus(targetOmset, actualIncome, {
-        bonus_80: target?.bonus_80_percent || 3,
-        bonus_100: target?.bonus_100_percent || 4,
-        bonus_150: target?.bonus_150_percent || 5
+        bonus_80: setting?.bonus_80_percent || 3,
+        bonus_100: setting?.bonus_100_percent || 4,
+        bonus_150: setting?.bonus_150_percent || 5
       });
 
       // Check if saved in salary history
@@ -139,12 +137,13 @@ export default function GajiAdmin() {
         bonus_amount: result.amount,
         status: savedRecord?.status || 'pending',
         paid_at: savedRecord?.paid_at,
-        isSaved: !!savedRecord
+        isSaved: !!savedRecord,
+        hasSettings: !!setting
       };
     });
-  }, [adminCodes, editingTargets, adminIncomes, salaryRecords]);
+  }, [adminCodes, permanentSettings, adminIncomes, salaryRecords]);
 
-  // Summary statistics
+  // Summary statistics for recap tab
   const totalAdminIncome = useMemo(() => {
     return adminIncomes.reduce((sum, income) => sum + income.total, 0);
   }, [adminIncomes]);
@@ -157,7 +156,7 @@ export default function GajiAdmin() {
     return calculatedRecords.filter(r => r.status === 'pending').length;
   }, [calculatedRecords]);
 
-  // Fetch admin codes from admin_income
+  // Fetch admin codes from admin_income (all unique codes)
   const fetchAdminCodes = async () => {
     const { data, error } = await supabase
       .from('admin_income')
@@ -173,7 +172,21 @@ export default function GajiAdmin() {
     setAdminCodes(uniqueCodes);
   };
 
-  // Fetch admin incomes for selected month/year
+  // Fetch permanent settings (no month/year filter)
+  const fetchPermanentSettings = async () => {
+    const { data, error } = await supabase
+      .from('admin_target_settings')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching permanent settings:', error);
+      return;
+    }
+
+    setPermanentSettings(data || []);
+  };
+
+  // Fetch admin incomes for selected month/year (for recap tab)
   const fetchAdminIncomes = async () => {
     const startDate = `${selectedYear}-${selectedMonth}-01`;
     const endDate = new Date(selectedYear, parseInt(selectedMonth), 0).toISOString().split('T')[0];
@@ -201,22 +214,6 @@ export default function GajiAdmin() {
     setAdminIncomes(incomes);
   };
 
-  // Fetch target settings for selected month/year
-  const fetchTargetSettings = async () => {
-    const { data, error } = await supabase
-      .from('admin_target_settings')
-      .select('*')
-      .eq('month', selectedMonth)
-      .eq('year', selectedYear);
-
-    if (error) {
-      console.error('Error fetching target settings:', error);
-      return;
-    }
-
-    setTargetSettings(data || []);
-  };
-
   // Fetch salary history for selected month/year
   const fetchSalaryRecords = async () => {
     const { data, error } = await supabase
@@ -237,39 +234,45 @@ export default function GajiAdmin() {
     setLoading(true);
     await Promise.all([
       fetchAdminCodes(),
+      fetchPermanentSettings(),
       fetchAdminIncomes(),
-      fetchTargetSettings(),
       fetchSalaryRecords()
     ]);
     setLoading(false);
   };
 
+  // Initial load
   useEffect(() => {
-    fetchAllData();
+    fetchAdminCodes();
+    fetchPermanentSettings();
+  }, []);
+
+  // Refetch monthly data when month/year changes
+  useEffect(() => {
+    fetchAdminIncomes();
+    fetchSalaryRecords();
   }, [selectedMonth, selectedYear]);
 
-  // Initialize editing targets when data changes
+  // Initialize editing settings when data changes
   useEffect(() => {
-    const targets: Record<string, AdminTarget> = {};
+    const settings: Record<string, AdminTargetPermanent> = {};
     
     adminCodes.forEach(code => {
-      const existing = targetSettings.find(t => t.admin_code === code);
-      targets[code] = existing || {
+      const existing = permanentSettings.find(s => s.admin_code === code);
+      settings[code] = existing || {
         admin_code: code,
         target_omset: 0,
-        month: selectedMonth,
-        year: selectedYear,
         bonus_80_percent: 3,
         bonus_100_percent: 4,
         bonus_150_percent: 5
       };
     });
     
-    setEditingTargets(targets);
-  }, [adminCodes, targetSettings, selectedMonth, selectedYear]);
+    setEditingSettings(settings);
+  }, [adminCodes, permanentSettings]);
 
-  const handleTargetChange = (code: string, field: keyof AdminTarget, value: number) => {
-    setEditingTargets(prev => ({
+  const handleSettingChange = (code: string, field: keyof AdminTargetPermanent, value: number) => {
+    setEditingSettings(prev => ({
       ...prev,
       [code]: {
         ...prev[code],
@@ -278,76 +281,36 @@ export default function GajiAdmin() {
     }));
   };
 
-  const saveTargets = async () => {
+  const saveSettings = async () => {
     setSaving(true);
     try {
       for (const code of adminCodes) {
-        const target = editingTargets[code];
-        if (!target) continue;
+        const setting = editingSettings[code];
+        if (!setting) continue;
 
         const { error } = await supabase
           .from('admin_target_settings')
           .upsert({
             admin_code: code,
-            target_omset: target.target_omset,
-            month: selectedMonth,
-            year: selectedYear,
-            bonus_80_percent: target.bonus_80_percent,
-            bonus_100_percent: target.bonus_100_percent,
-            bonus_150_percent: target.bonus_150_percent
+            target_omset: setting.target_omset,
+            bonus_80_percent: setting.bonus_80_percent,
+            bonus_100_percent: setting.bonus_100_percent,
+            bonus_150_percent: setting.bonus_150_percent
           }, {
-            onConflict: 'admin_code,month,year'
+            onConflict: 'admin_code'
           });
 
         if (error) throw error;
       }
 
-      toast.success('Target berhasil disimpan');
-      await fetchTargetSettings();
+      toast.success('Setting gaji admin berhasil disimpan');
+      await fetchPermanentSettings();
     } catch (error) {
-      console.error('Error saving targets:', error);
-      toast.error('Gagal menyimpan target');
+      console.error('Error saving settings:', error);
+      toast.error('Gagal menyimpan setting');
     } finally {
       setSaving(false);
     }
-  };
-
-  const copyFromPreviousMonth = async () => {
-    const prevMonth = parseInt(selectedMonth) === 1 ? 12 : parseInt(selectedMonth) - 1;
-    const prevYear = parseInt(selectedMonth) === 1 ? selectedYear - 1 : selectedYear;
-    const prevMonthStr = String(prevMonth).padStart(2, '0');
-
-    const { data, error } = await supabase
-      .from('admin_target_settings')
-      .select('*')
-      .eq('month', prevMonthStr)
-      .eq('year', prevYear);
-
-    if (error) {
-      toast.error('Gagal mengambil data bulan sebelumnya');
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      toast.info('Tidak ada data target di bulan sebelumnya');
-      return;
-    }
-
-    const newTargets: Record<string, AdminTarget> = { ...editingTargets };
-    data.forEach(item => {
-      if (newTargets[item.admin_code]) {
-        newTargets[item.admin_code] = {
-          ...newTargets[item.admin_code],
-          target_omset: item.target_omset,
-          bonus_80_percent: item.bonus_80_percent,
-          bonus_100_percent: item.bonus_100_percent,
-          bonus_150_percent: item.bonus_150_percent
-        };
-      }
-    });
-
-    setEditingTargets(newTargets);
-    toast.success('Target berhasil di-copy dari bulan sebelumnya');
   };
 
   const saveRekapGaji = async () => {
@@ -426,94 +389,29 @@ export default function GajiAdmin() {
             <h1 className="text-2xl font-bold text-foreground">Gaji Admin</h1>
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <DollarSign className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Pendapatan Admin</p>
-                    <p className="text-xl font-bold text-foreground">{formatCurrency(totalAdminIncome)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-500/10 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Bonus</p>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(totalBonus)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-yellow-500/10 rounded-lg">
-                    <Users className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Admin Pending</p>
-                    <p className="text-xl font-bold text-foreground">{pendingCount} Admin</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Period Selector */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="w-40">
-                  <label className="text-sm font-medium mb-1 block">Bulan</label>
-                  <SearchableSelect
-                    options={MONTHS}
-                    value={selectedMonth}
-                    onValueChange={setSelectedMonth}
-                    placeholder="Pilih Bulan"
-                  />
-                </div>
-                <div className="w-32">
-                  <label className="text-sm font-medium mb-1 block">Tahun</label>
-                  <SearchableSelect
-                    options={yearOptions}
-                    value={String(selectedYear)}
-                    onValueChange={(v) => setSelectedYear(parseInt(v))}
-                    placeholder="Pilih Tahun"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Tabs defaultValue="settings" className="space-y-4">
             <TabsList className="grid w-full grid-cols-2 max-w-md">
-              <TabsTrigger value="settings">Setting Target</TabsTrigger>
-              <TabsTrigger value="recap">Rekap Gaji</TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" /> Setting Gaji
+              </TabsTrigger>
+              <TabsTrigger value="recap" className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" /> Rekap Gaji
+              </TabsTrigger>
             </TabsList>
 
-            {/* Tab 1: Setting Target with Real-time Calculation */}
+            {/* Tab 1: Setting Gaji Admin (Permanent) */}
             <TabsContent value="settings">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
-                  <CardTitle>Setting Target Admin - {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={copyFromPreviousMonth}>
-                      <Copy className="w-4 h-4 mr-2" /> Copy Bulan Lalu
-                    </Button>
-                    <Button onClick={saveTargets} disabled={saving}>
-                      <Save className="w-4 h-4 mr-2" /> Simpan Target
-                    </Button>
+                  <div>
+                    <CardTitle>Setting Gaji Admin</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Setting ini berlaku permanen sampai diubah
+                    </p>
                   </div>
+                  <Button onClick={saveSettings} disabled={saving}>
+                    <Save className="w-4 h-4 mr-2" /> Simpan Setting
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -533,32 +431,23 @@ export default function GajiAdmin() {
                             <TableHead>Bonus 80%</TableHead>
                             <TableHead>Bonus 100%</TableHead>
                             <TableHead>Bonus 150%</TableHead>
-                            <TableHead className="text-right">Pendapatan</TableHead>
-                            <TableHead className="text-right">Pencapaian</TableHead>
-                            <TableHead className="text-right">Bonus %</TableHead>
-                            <TableHead className="text-right">Nominal Bonus</TableHead>
+                            <TableHead>Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {adminCodes.map(code => {
-                            const target = editingTargets[code];
-                            const calculated = calculatedRecords.find(r => r.admin_code === code);
-                            const hasTarget = targetSettings.some(t => t.admin_code === code);
+                            const setting = editingSettings[code];
+                            const hasSetting = permanentSettings.some(s => s.admin_code === code);
 
                             return (
                               <TableRow key={code}>
-                                <TableCell className="font-medium">
-                                  {code}
-                                  {!hasTarget && (
-                                    <Badge variant="destructive" className="ml-2 text-xs">Baru</Badge>
-                                  )}
-                                </TableCell>
+                                <TableCell className="font-medium">{code}</TableCell>
                                 <TableCell>
                                   <Input
                                     type="number"
                                     className="w-36"
-                                    value={target?.target_omset || 0}
-                                    onChange={(e) => handleTargetChange(code, 'target_omset', Number(e.target.value))}
+                                    value={setting?.target_omset || 0}
+                                    onChange={(e) => handleSettingChange(code, 'target_omset', Number(e.target.value))}
                                     placeholder="Target"
                                   />
                                 </TableCell>
@@ -567,8 +456,8 @@ export default function GajiAdmin() {
                                     <Input
                                       type="number"
                                       className="w-16"
-                                      value={target?.bonus_80_percent || 3}
-                                      onChange={(e) => handleTargetChange(code, 'bonus_80_percent', Number(e.target.value))}
+                                      value={setting?.bonus_80_percent || 3}
+                                      onChange={(e) => handleSettingChange(code, 'bonus_80_percent', Number(e.target.value))}
                                     />
                                     <span className="text-muted-foreground">%</span>
                                   </div>
@@ -578,8 +467,8 @@ export default function GajiAdmin() {
                                     <Input
                                       type="number"
                                       className="w-16"
-                                      value={target?.bonus_100_percent || 4}
-                                      onChange={(e) => handleTargetChange(code, 'bonus_100_percent', Number(e.target.value))}
+                                      value={setting?.bonus_100_percent || 4}
+                                      onChange={(e) => handleSettingChange(code, 'bonus_100_percent', Number(e.target.value))}
                                     />
                                     <span className="text-muted-foreground">%</span>
                                   </div>
@@ -589,23 +478,18 @@ export default function GajiAdmin() {
                                     <Input
                                       type="number"
                                       className="w-16"
-                                      value={target?.bonus_150_percent || 5}
-                                      onChange={(e) => handleTargetChange(code, 'bonus_150_percent', Number(e.target.value))}
+                                      value={setting?.bonus_150_percent || 5}
+                                      onChange={(e) => handleSettingChange(code, 'bonus_150_percent', Number(e.target.value))}
                                     />
                                     <span className="text-muted-foreground">%</span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right font-medium">
-                                  {formatCurrency(calculated?.actual_income || 0)}
-                                </TableCell>
-                                <TableCell className={`text-right ${getAchievementColor(calculated?.achievement_percent || 0)}`}>
-                                  {(calculated?.achievement_percent || 0).toFixed(1)}%
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {calculated?.bonus_percent || 0}%
-                                </TableCell>
-                                <TableCell className="text-right font-bold text-green-600">
-                                  {formatCurrency(calculated?.bonus_amount || 0)}
+                                <TableCell>
+                                  {hasSetting ? (
+                                    <Badge className="bg-green-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Tersimpan</Badge>
+                                  ) : (
+                                    <Badge variant="destructive">Belum Disetting</Badge>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             );
@@ -618,16 +502,82 @@ export default function GajiAdmin() {
               </Card>
             </TabsContent>
 
-            {/* Tab 2: Rekap Gaji - Real-time display */}
+            {/* Tab 2: Rekap Gaji Admin (Per Bulan) */}
             <TabsContent value="recap">
+              {/* Period Selector */}
+              <Card className="mb-6">
+                <CardContent className="pt-6">
+                  <div className="flex flex-wrap gap-4 items-center">
+                    <div className="w-40">
+                      <label className="text-sm font-medium mb-1 block">Bulan</label>
+                      <SearchableSelect
+                        options={MONTHS}
+                        value={selectedMonth}
+                        onValueChange={setSelectedMonth}
+                        placeholder="Pilih Bulan"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <label className="text-sm font-medium mb-1 block">Tahun</label>
+                      <SearchableSelect
+                        options={yearOptions}
+                        value={String(selectedYear)}
+                        onValueChange={(v) => setSelectedYear(parseInt(v))}
+                        placeholder="Pilih Tahun"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-lg">
+                        <DollarSign className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Pendapatan</p>
+                        <p className="text-xl font-bold text-foreground">{formatCurrency(totalAdminIncome)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-green-500/10 rounded-lg">
+                        <TrendingUp className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Bonus</p>
+                        <p className="text-xl font-bold text-green-600">{formatCurrency(totalBonus)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-yellow-500/10 rounded-lg">
+                        <Users className="w-6 h-6 text-yellow-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Admin Pending</p>
+                        <p className="text-xl font-bold text-foreground">{pendingCount} Admin</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Rekap Table */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                   <div>
-                    <CardTitle>Rekap Gaji Admin - {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Total Bonus: <span className="font-bold text-primary">{formatCurrency(totalBonus)}</span>
-                      {pendingCount > 0 && <span className="ml-4">({pendingCount} pending)</span>}
-                    </p>
+                    <CardTitle>Rekap Gaji - {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
                   </div>
                   <Button onClick={saveRekapGaji} disabled={saving}>
                     <Save className="w-4 h-4 mr-2" /> Simpan Rekap
@@ -638,7 +588,7 @@ export default function GajiAdmin() {
                     <div className="text-center py-8">Memuat data...</div>
                   ) : calculatedRecords.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Calculator className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <AlertCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       Tidak ada data admin untuk periode ini
                     </div>
                   ) : (
@@ -661,8 +611,8 @@ export default function GajiAdmin() {
                             <TableRow key={record.admin_code}>
                               <TableCell className="font-medium">
                                 {record.admin_code}
-                                {!record.isSaved && (
-                                  <Badge variant="outline" className="ml-2 text-xs">Belum Disimpan</Badge>
+                                {!record.hasSettings && (
+                                  <Badge variant="destructive" className="ml-2 text-xs">Belum Disetting</Badge>
                                 )}
                               </TableCell>
                               <TableCell className="text-right">{formatCurrency(record.target_omset)}</TableCell>
@@ -682,8 +632,11 @@ export default function GajiAdmin() {
                                     variant="outline"
                                     onClick={() => markAsPaid(record.admin_code)}
                                   >
-                                    <CheckCircle2 className="w-4 h-4 mr-1" /> Tandai Dibayar
+                                    <CheckCircle2 className="w-4 h-4 mr-1" /> Dibayar
                                   </Button>
+                                )}
+                                {!record.isSaved && (
+                                  <span className="text-xs text-muted-foreground">Simpan dulu</span>
                                 )}
                               </TableCell>
                             </TableRow>
