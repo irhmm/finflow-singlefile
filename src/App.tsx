@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import LaporanKeuangan from "./pages/LaporanKeuangan";
 import RekapGajiWorker from "./pages/RekapGajiWorker";
 import WorkerDone from "./pages/WorkerDone";
+import GajiAdmin from "./pages/GajiAdmin";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,11 @@ function AppContent() {
           <Route path="/worker-done" element={
             <ProtectedRoute requireCanEdit={true}>
               <WorkerDone />
+            </ProtectedRoute>
+          } />
+          <Route path="/gaji-admin" element={
+            <ProtectedRoute requireSuperAdmin={true}>
+              <GajiAdmin />
             </ProtectedRoute>
           } />
           <Route path="*" element={<NotFound />} />

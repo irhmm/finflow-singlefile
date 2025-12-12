@@ -35,6 +35,93 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_salary_history: {
+        Row: {
+          achievement_percent: number
+          actual_income: number
+          admin_code: string
+          bonus_amount: number
+          bonus_percent: number
+          created_at: string | null
+          id: string
+          month: string
+          paid_at: string | null
+          status: string
+          target_omset: number
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          achievement_percent?: number
+          actual_income?: number
+          admin_code: string
+          bonus_amount?: number
+          bonus_percent?: number
+          created_at?: string | null
+          id?: string
+          month: string
+          paid_at?: string | null
+          status?: string
+          target_omset?: number
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          achievement_percent?: number
+          actual_income?: number
+          admin_code?: string
+          bonus_amount?: number
+          bonus_percent?: number
+          created_at?: string | null
+          id?: string
+          month?: string
+          paid_at?: string | null
+          status?: string
+          target_omset?: number
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      admin_target_settings: {
+        Row: {
+          admin_code: string
+          bonus_100_percent: number
+          bonus_150_percent: number
+          bonus_80_percent: number
+          created_at: string | null
+          id: string
+          month: string
+          target_omset: number
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          admin_code: string
+          bonus_100_percent?: number
+          bonus_150_percent?: number
+          bonus_80_percent?: number
+          created_at?: string | null
+          id?: string
+          month: string
+          target_omset?: number
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          admin_code?: string
+          bonus_100_percent?: number
+          bonus_150_percent?: number
+          bonus_80_percent?: number
+          created_at?: string | null
+          id?: string
+          month?: string
+          target_omset?: number
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           id: number
