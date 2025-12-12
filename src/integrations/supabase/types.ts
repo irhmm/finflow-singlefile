@@ -91,10 +91,8 @@ export type Database = {
           bonus_80_percent: number
           created_at: string | null
           id: string
-          month: string
           target_omset: number
           updated_at: string | null
-          year: number
         }
         Insert: {
           admin_code: string
@@ -103,10 +101,8 @@ export type Database = {
           bonus_80_percent?: number
           created_at?: string | null
           id?: string
-          month: string
           target_omset?: number
           updated_at?: string | null
-          year: number
         }
         Update: {
           admin_code?: string
@@ -115,10 +111,8 @@ export type Database = {
           bonus_80_percent?: number
           created_at?: string | null
           id?: string
-          month?: string
           target_omset?: number
           updated_at?: string | null
-          year?: number
         }
         Relationships: []
       }
