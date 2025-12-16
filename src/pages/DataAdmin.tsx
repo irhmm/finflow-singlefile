@@ -19,6 +19,7 @@ interface Admin {
   gaji_pokok: number;
   no_rek: string | null;
   nomor: string | null;
+  role: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -199,6 +200,7 @@ const DataAdmin = () => {
                       <TableHead className="w-12 text-center">No</TableHead>
                       <TableHead>Nama Admin</TableHead>
                       <TableHead className="text-center">Code</TableHead>
+                      <TableHead>Role</TableHead>
                       <TableHead className="text-right">Gaji Pokok</TableHead>
                       <TableHead>No. Rekening</TableHead>
                       <TableHead>Nomor HP</TableHead>
@@ -209,13 +211,13 @@ const DataAdmin = () => {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           Memuat data...
                         </TableCell>
                       </TableRow>
                     ) : paginatedAdmins.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           Tidak ada data admin
                         </TableCell>
                       </TableRow>
@@ -230,6 +232,9 @@ const DataAdmin = () => {
                             <Badge variant="outline" className="font-mono">
                               {admin.code}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {admin.role || "-"}
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(admin.gaji_pokok)}
@@ -300,6 +305,10 @@ const DataAdmin = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
+                            <p className="text-muted-foreground">Role</p>
+                            <p className="font-medium">{admin.role || "-"}</p>
+                          </div>
+                          <div>
                             <p className="text-muted-foreground">Gaji Pokok</p>
                             <p className="font-medium">{formatCurrency(admin.gaji_pokok)}</p>
                           </div>
@@ -307,7 +316,7 @@ const DataAdmin = () => {
                             <p className="text-muted-foreground">No. Rekening</p>
                             <p className="font-medium">{admin.no_rek || "-"}</p>
                           </div>
-                          <div className="col-span-2">
+                          <div>
                             <p className="text-muted-foreground">Nomor HP</p>
                             <p className="font-medium">{admin.nomor || "-"}</p>
                           </div>

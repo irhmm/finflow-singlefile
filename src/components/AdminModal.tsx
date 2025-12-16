@@ -26,6 +26,7 @@ interface Admin {
   gaji_pokok: number;
   no_rek: string | null;
   nomor: string | null;
+  role: string | null;
   status: string;
 }
 
@@ -44,6 +45,7 @@ export function AdminModal({ isOpen, onClose, onSuccess, editData }: AdminModalP
     gaji_pokok: "",
     no_rek: "",
     nomor: "",
+    role: "",
     status: "aktif",
   });
 
@@ -55,6 +57,7 @@ export function AdminModal({ isOpen, onClose, onSuccess, editData }: AdminModalP
         gaji_pokok: editData.gaji_pokok.toString(),
         no_rek: editData.no_rek || "",
         nomor: editData.nomor || "",
+        role: editData.role || "",
         status: editData.status,
       });
     } else {
@@ -64,6 +67,7 @@ export function AdminModal({ isOpen, onClose, onSuccess, editData }: AdminModalP
         gaji_pokok: "",
         no_rek: "",
         nomor: "",
+        role: "",
         status: "aktif",
       });
     }
@@ -93,6 +97,7 @@ export function AdminModal({ isOpen, onClose, onSuccess, editData }: AdminModalP
         gaji_pokok: parseFloat(formData.gaji_pokok),
         no_rek: formData.no_rek.trim() || null,
         nomor: formData.nomor.trim() || null,
+        role: formData.role.trim() || null,
         status: formData.status,
       };
 
@@ -184,6 +189,16 @@ export function AdminModal({ isOpen, onClose, onSuccess, editData }: AdminModalP
               value={formData.nomor}
               onChange={(e) => setFormData({ ...formData, nomor: e.target.value })}
               placeholder="Masukkan nomor HP"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Input
+              id="role"
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              placeholder="Contoh: Admin Keuangan, Super Admin"
             />
           </div>
 
