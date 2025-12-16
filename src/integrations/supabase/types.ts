@@ -125,6 +125,7 @@ export type Database = {
           nama: string
           no_rek: string | null
           nomor: string | null
+          role: string | null
           status: string
           updated_at: string | null
         }
@@ -136,6 +137,7 @@ export type Database = {
           nama: string
           no_rek?: string | null
           nomor?: string | null
+          role?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -147,6 +149,7 @@ export type Database = {
           nama?: string
           no_rek?: string | null
           nomor?: string | null
+          role?: string | null
           status?: string
           updated_at?: string | null
         }
