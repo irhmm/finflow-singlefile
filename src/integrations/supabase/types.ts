@@ -116,6 +116,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admins: {
+        Row: {
+          code: string
+          created_at: string | null
+          gaji_pokok: number
+          id: number
+          nama: string
+          no_rek: string | null
+          nomor: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          gaji_pokok?: number
+          id?: number
+          nama: string
+          no_rek?: string | null
+          nomor?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          gaji_pokok?: number
+          id?: number
+          nama?: string
+          no_rek?: string | null
+          nomor?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           id: number

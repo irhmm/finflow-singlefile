@@ -1,4 +1,4 @@
-import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck, Wallet, CheckCircle2, Briefcase } from "lucide-react";
+import { CreditCard, Users, TrendingDown, BarChart3, Menu, LogOut, UserCheck, Wallet, CheckCircle2, Briefcase, ShieldCheck } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import {
 import { TableType } from "./FinancialDashboard";
 
 interface AppSidebarProps {
-  activeTable: TableType | "laporan" | "rekap_gaji" | "worker_done" | "gaji_admin";
+  activeTable: TableType | "laporan" | "rekap_gaji" | "worker_done" | "gaji_admin" | "admins";
   onTableChange: (table: TableType) => void;
 }
 
@@ -41,6 +41,15 @@ const navigationItems = [
     table: "expenses" as TableType,
     isRoute: false,
     publicAccess: false
+  },
+  {
+    title: "Data Admin",
+    icon: ShieldCheck,
+    table: "admins" as any,
+    path: "/data-admin",
+    isRoute: true,
+    publicAccess: false,
+    superAdminOnly: true
   },
   {
     title: "Data Worker",
