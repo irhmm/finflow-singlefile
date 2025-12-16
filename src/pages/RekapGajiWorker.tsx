@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Plus, Wallet, TrendingDown, Check, ChevronsUpDown, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -18,6 +17,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface WorkerIncome {
   id: number;
@@ -53,12 +53,8 @@ export default function RekapGajiWorker() {
   const [summary, setSummary] = useState<SummaryData>({ totalIncome: 0, totalWithdrawals: 0, remainingBalance: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [incomeCurrentPage, setIncomeCurrentPage] = useState(1);
-  const [withdrawalCurrentPage, setWithdrawalCurrentPage] = useState(1);
   const [workerComboboxOpen, setWorkerComboboxOpen] = useState(false);
   const [monthComboboxOpen, setMonthComboboxOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("pendapatan");
-  const itemsPerPage = 10;
   const canWrite = ['admin', 'admin_keuangan', 'super_admin'].includes(userRole);
 
   // Form state
@@ -310,23 +306,9 @@ export default function RekapGajiWorker() {
     }).format(amount);
   };
 
-  const formatDateShort = (dateString: string) => {
-    return format(new Date(dateString), "dd MMM", { locale: id });
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd MMM yyyy", { locale: id });
   };
-
-  // Pagination logic
-  const incomeStartIndex = (incomeCurrentPage - 1) * itemsPerPage;
-  const paginatedIncomes = workerIncomes.slice(incomeStartIndex, incomeStartIndex + itemsPerPage);
-  const incomeTotalPages = Math.ceil(workerIncomes.length / itemsPerPage);
-
-  const withdrawalStartIndex = (withdrawalCurrentPage - 1) * itemsPerPage;
-  const paginatedWithdrawals = salaryWithdrawals.slice(withdrawalStartIndex, withdrawalStartIndex + itemsPerPage);
-  const withdrawalTotalPages = Math.ceil(salaryWithdrawals.length / itemsPerPage);
-
-  // Calculate progress percentage
-  const progressPercent = summary.totalIncome > 0 
-    ? Math.round((summary.totalWithdrawals / summary.totalIncome) * 100) 
-    : 0;
 
   if (loading) {
     return (
@@ -338,7 +320,7 @@ export default function RekapGajiWorker() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-slate-50">
         <AppSidebar activeTable="rekap_gaji" onTableChange={() => {}} />
         
         <main className="flex-1">
@@ -349,435 +331,396 @@ export default function RekapGajiWorker() {
             </div>
           </header>
 
-          <div className="p-4 md:p-6 space-y-4 max-w-3xl mx-auto">
-            {/* Filter Section - Compact */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Worker Filter */}
-              <Popover open={workerComboboxOpen} onOpenChange={setWorkerComboboxOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={workerComboboxOpen}
-                    className="flex-1 justify-between"
-                  >
-                    {selectedWorker || "Pilih worker..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Cari worker..." />
-                    <CommandList>
-                      <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
-                      <CommandGroup>
-                        {workers.map((worker) => (
-                          <CommandItem
-                            key={worker}
-                            value={worker}
-                            onSelect={(currentValue) => {
-                              setSelectedWorker(currentValue === selectedWorker ? "" : currentValue);
-                              setWorkerComboboxOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedWorker === worker ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {worker}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+          <div className="p-4 md:p-6 space-y-6">
+            {/* Filter Data Card */}
+            <Card className="shadow-lg border-0">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <Filter className="h-5 w-5" />
+                  Filter Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col lg:flex-row gap-4">
+                  {/* Worker Filter */}
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-sm font-medium">Pilih Worker</Label>
+                    <Popover open={workerComboboxOpen} onOpenChange={setWorkerComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={workerComboboxOpen}
+                          className="w-full justify-between bg-background"
+                        >
+                          {selectedWorker || "Pilih worker..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Cari worker..." />
+                          <CommandList>
+                            <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value=""
+                                onSelect={() => {
+                                  setSelectedWorker("");
+                                  setWorkerComboboxOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", !selectedWorker ? "opacity-100" : "opacity-0")} />
+                                Semua Worker
+                              </CommandItem>
+                              {workers.map((worker) => (
+                                <CommandItem
+                                  key={worker}
+                                  value={worker}
+                                  onSelect={(currentValue) => {
+                                    setSelectedWorker(currentValue === selectedWorker ? "" : currentValue);
+                                    setWorkerComboboxOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", selectedWorker === worker ? "opacity-100" : "opacity-0")} />
+                                  {worker}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-              {/* Month Filter */}
-              <Popover open={monthComboboxOpen} onOpenChange={setMonthComboboxOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={monthComboboxOpen}
-                    className="flex-1 justify-between"
-                  >
-                    {selectedMonth ? format(new Date(selectedMonth), "MMMM yyyy", { locale: id }) : "Pilih bulan..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Cari bulan..." />
-                    <CommandList>
-                      <CommandEmpty>Tidak ada bulan ditemukan.</CommandEmpty>
-                      <CommandGroup>
-                        {availableMonths.map((month) => (
-                          <CommandItem
-                            key={month}
-                            value={month}
-                            onSelect={(currentValue) => {
-                              setSelectedMonth(currentValue === selectedMonth ? "" : currentValue);
-                              setMonthComboboxOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedMonth === month ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {format(new Date(month), "MMMM yyyy", { locale: id })}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+                  {/* Month Filter */}
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-sm font-medium">Pilih Bulan</Label>
+                    <Popover open={monthComboboxOpen} onOpenChange={setMonthComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={monthComboboxOpen}
+                          className="w-full justify-between bg-background"
+                        >
+                          {selectedMonth ? format(new Date(selectedMonth), "MMMM yyyy", { locale: id }) : "Pilih bulan..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Cari bulan..." />
+                          <CommandList>
+                            <CommandEmpty>Tidak ada bulan ditemukan.</CommandEmpty>
+                            <CommandGroup>
+                              {availableMonths.map((month) => (
+                                <CommandItem
+                                  key={month}
+                                  value={month}
+                                  onSelect={(currentValue) => {
+                                    setSelectedMonth(currentValue === selectedMonth ? "" : currentValue);
+                                    setMonthComboboxOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", selectedMonth === month ? "opacity-100" : "opacity-0")} />
+                                  {format(new Date(month), "MMMM yyyy", { locale: id })}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-            {/* Summary Card - Large with Progress */}
-            {(selectedWorker || selectedMonth) && (
-              <Card className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    {/* Main Balance Display */}
-                    <div className="text-center space-y-1">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <Wallet className="h-5 w-5" />
-                        <span className="text-sm font-medium">Sisa Gaji</span>
-                      </div>
-                      <p className={cn(
-                        "text-4xl font-bold",
-                        summary.remainingBalance >= 0 ? "text-primary" : "text-destructive"
-                      )}>
-                        {formatCurrency(summary.remainingBalance)}
+                  {/* Add Withdrawal Button */}
+                  {canWrite && (
+                    <div className="flex items-end">
+                      <Dialog 
+                        open={isDialogOpen} 
+                        onOpenChange={(open) => {
+                          setIsDialogOpen(open);
+                          if (!open) {
+                            setSelectedWorkerBalance(null);
+                            setFormData({ worker: "", amount: "", catatan: "" });
+                          }
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button className="w-full lg:w-auto bg-emerald-500 hover:bg-emerald-600 text-white">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Tambah Pengambilan Gaji
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Tambah Pengambilan Gaji</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="formWorker">Worker</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline" 
+                                    role="combobox"
+                                    className="w-full justify-between"
+                                  >
+                                    {formData.worker || "Pilih worker..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Cari worker..." />
+                                    <CommandList>
+                                      <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
+                                      <CommandGroup>
+                                        {workers.map((worker) => (
+                                          <CommandItem
+                                            key={worker}
+                                            value={worker}
+                                            onSelect={(currentValue) => {
+                                              setFormData(prev => ({ ...prev, worker: currentValue }));
+                                              calculateWorkerBalance(currentValue);
+                                            }}
+                                          >
+                                            <Check className={cn("mr-2 h-4 w-4", formData.worker === worker ? "opacity-100" : "opacity-0")} />
+                                            {worker}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            
+                            {/* Balance display */}
+                            {isCalculatingBalance && (
+                              <div className="p-3 rounded-lg bg-muted border">
+                                <span className="text-sm text-muted-foreground">Menghitung sisa gaji...</span>
+                              </div>
+                            )}
+                            {!isCalculatingBalance && selectedWorkerBalance !== null && (
+                              <div className={cn(
+                                "p-3 rounded-lg border",
+                                selectedWorkerBalance <= 0 ? 'bg-destructive/10 border-destructive/30' : 'bg-green-50 border-green-200'
+                              )}>
+                                <div className="flex items-center gap-2">
+                                  <Wallet className={cn("h-4 w-4", selectedWorkerBalance <= 0 ? 'text-destructive' : 'text-green-600')} />
+                                  <span className={cn("text-sm font-medium", selectedWorkerBalance <= 0 ? 'text-destructive' : 'text-green-700')}>
+                                    Sisa Gaji: {formatCurrency(selectedWorkerBalance)}
+                                  </span>
+                                </div>
+                                {selectedWorkerBalance <= 0 && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    ⚠️ Tidak ada sisa gaji untuk diambil
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="amount">Jumlah</Label>
+                              <Input
+                                type="number"
+                                placeholder="Masukkan jumlah..."
+                                value={formData.amount}
+                                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                              />
+                              {formData.amount && selectedWorkerBalance !== null && Number(formData.amount) > selectedWorkerBalance && (
+                                <p className="text-xs text-destructive">
+                                  ⚠️ Jumlah melebihi sisa gaji ({formatCurrency(selectedWorkerBalance)})
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="catatan">Catatan (opsional)</Label>
+                              <Textarea
+                                placeholder="Masukkan catatan..."
+                                value={formData.catatan}
+                                onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
+                              />
+                            </div>
+                            
+                            <Button 
+                              type="submit" 
+                              className="w-full"
+                              disabled={
+                                !formData.worker || 
+                                !formData.amount || 
+                                selectedWorkerBalance === null ||
+                                selectedWorkerBalance <= 0 ||
+                                Number(formData.amount) <= 0 ||
+                                Number(formData.amount) > selectedWorkerBalance
+                              }
+                            >
+                              Simpan
+                            </Button>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Total Pendapatan */}
+              <Card className="bg-emerald-50 border-0 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-600">Total Pendapatan</p>
+                      <p className="text-2xl font-bold text-emerald-600 mt-1">
+                        {formatCurrency(summary.totalIncome)}
                       </p>
                     </div>
-
-                    {/* Progress Bar */}
-                    <div className="space-y-2">
-                      <Progress 
-                        value={progressPercent} 
-                        className="h-3"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Diambil {progressPercent}%</span>
-                        <span>Tersisa {100 - progressPercent}%</span>
-                      </div>
-                    </div>
-
-                    {/* Income vs Withdrawal Summary */}
-                    <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1.5 text-green-600 mb-1">
-                          <ArrowDownCircle className="h-4 w-4" />
-                          <span className="text-xs font-medium">Pendapatan</span>
-                        </div>
-                        <p className="text-lg font-semibold text-green-700">{formatCurrency(summary.totalIncome)}</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1.5 text-orange-600 mb-1">
-                          <ArrowUpCircle className="h-4 w-4" />
-                          <span className="text-xs font-medium">Diambil</span>
-                        </div>
-                        <p className="text-lg font-semibold text-orange-700">{formatCurrency(summary.totalWithdrawals)}</p>
-                      </div>
-                    </div>
+                    <TrendingUp className="h-8 w-8 text-emerald-500" />
                   </div>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Empty State */}
-            {!selectedWorker && !selectedMonth && (
-              <Card className="p-8 border-dashed">
-                <div className="flex flex-col items-center justify-center space-y-3 text-center">
-                  <Wallet className="h-12 w-12 text-muted-foreground/40" />
-                  <div>
-                    <h3 className="text-lg font-semibold">Pilih Worker & Bulan</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Silakan pilih filter untuk melihat rekap gaji
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Data Tables with Tabs */}
-            {(selectedWorker || selectedMonth) && (
-              <Card>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="w-full grid grid-cols-2">
-                    <TabsTrigger value="pendapatan" className="gap-2">
-                      <ArrowDownCircle className="h-4 w-4" />
-                      Pendapatan ({workerIncomes.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="pengambilan" className="gap-2">
-                      <ArrowUpCircle className="h-4 w-4" />
-                      Pengambilan ({salaryWithdrawals.length})
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* Pendapatan Tab */}
-                  <TabsContent value="pendapatan" className="p-4 space-y-3">
-                    {isLoading ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : paginatedIncomes.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <TrendingDown className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                        <p>Tidak ada data pendapatan</p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Mobile Card View */}
-                        <div className="space-y-2">
-                          {paginatedIncomes.map((income) => (
-                            <div 
-                              key={income.id}
-                              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">
-                                  {income.jobdesk || "(Tanpa jobdesk)"} 
-                                  <span className="text-muted-foreground ml-1">({income.code})</span>
-                                </p>
-                                <p className="text-xs text-muted-foreground">{formatDateShort(income.tanggal)}</p>
-                              </div>
-                              <p className="font-semibold text-green-600 ml-3">{formatCurrency(income.fee)}</p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Pagination */}
-                        {incomeTotalPages > 1 && (
-                          <div className="flex items-center justify-between pt-3 border-t">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIncomeCurrentPage(prev => Math.max(prev - 1, 1))}
-                              disabled={incomeCurrentPage === 1}
-                            >
-                              ← Prev
-                            </Button>
-                            <span className="text-sm text-muted-foreground">
-                              {incomeCurrentPage} / {incomeTotalPages}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIncomeCurrentPage(prev => Math.min(prev + 1, incomeTotalPages))}
-                              disabled={incomeCurrentPage === incomeTotalPages}
-                            >
-                              Next →
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </TabsContent>
-
-                  {/* Pengambilan Tab */}
-                  <TabsContent value="pengambilan" className="p-4 space-y-3">
-                    {isLoading ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : paginatedWithdrawals.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Wallet className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                        <p>Tidak ada pengambilan gaji</p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Mobile Card View */}
-                        <div className="space-y-2">
-                          {paginatedWithdrawals.map((withdrawal) => (
-                            <div 
-                              key={withdrawal.id}
-                              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">
-                                  {withdrawal.catatan || "Pengambilan gaji"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{formatDateShort(withdrawal.tanggal)}</p>
-                              </div>
-                              <p className="font-semibold text-orange-600 ml-3">-{formatCurrency(withdrawal.amount)}</p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Pagination */}
-                        {withdrawalTotalPages > 1 && (
-                          <div className="flex items-center justify-between pt-3 border-t">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setWithdrawalCurrentPage(prev => Math.max(prev - 1, 1))}
-                              disabled={withdrawalCurrentPage === 1}
-                            >
-                              ← Prev
-                            </Button>
-                            <span className="text-sm text-muted-foreground">
-                              {withdrawalCurrentPage} / {withdrawalTotalPages}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setWithdrawalCurrentPage(prev => Math.min(prev + 1, withdrawalTotalPages))}
-                              disabled={withdrawalCurrentPage === withdrawalTotalPages}
-                            >
-                              Next →
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </Card>
-            )}
-
-            {/* Add Withdrawal Button - Fixed at bottom on mobile */}
-            {canWrite && (selectedWorker || selectedMonth) && (
-              <Dialog 
-                open={isDialogOpen} 
-                onOpenChange={(open) => {
-                  setIsDialogOpen(open);
-                  if (!open) {
-                    setSelectedWorkerBalance(null);
-                    setFormData({ worker: "", amount: "", catatan: "" });
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
-                  <Button className="w-full" size="lg">
-                    <Plus className="h-5 w-5 mr-2" />
-                    Tambah Pengambilan Gaji
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Tambah Pengambilan Gaji</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="formWorker">Worker</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline" 
-                            role="combobox"
-                            className="w-full justify-between"
-                          >
-                            {formData.worker || "Pilih worker..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Cari worker..." />
-                            <CommandList>
-                              <CommandEmpty>Tidak ada worker ditemukan.</CommandEmpty>
-                              <CommandGroup>
-                                {workers.map((worker) => (
-                                  <CommandItem
-                                    key={worker}
-                                    value={worker}
-                                    onSelect={(currentValue) => {
-                                      setFormData(prev => ({ ...prev, worker: currentValue }));
-                                      calculateWorkerBalance(currentValue);
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        formData.worker === worker ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {worker}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+              {/* Total Pengambilan */}
+              <Card className="bg-blue-50 border-0 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Total Pengambilan</p>
+                      <p className="text-2xl font-bold text-blue-600 mt-1">
+                        {formatCurrency(summary.totalWithdrawals)}
+                      </p>
                     </div>
-                    
-                    {/* Balance display */}
-                    {isCalculatingBalance && (
-                      <div className="p-3 rounded-lg bg-muted border">
-                        <span className="text-sm text-muted-foreground">Menghitung sisa gaji...</span>
-                      </div>
-                    )}
-                    {!isCalculatingBalance && selectedWorkerBalance !== null && (
-                      <div className={cn(
-                        "p-3 rounded-lg border",
-                        selectedWorkerBalance <= 0 ? 'bg-destructive/10 border-destructive/30' : 'bg-green-50 border-green-200'
-                      )}>
-                        <div className="flex items-center gap-2">
-                          <Wallet className={cn("h-4 w-4", selectedWorkerBalance <= 0 ? 'text-destructive' : 'text-green-600')} />
-                          <span className={cn("text-sm font-medium", selectedWorkerBalance <= 0 ? 'text-destructive' : 'text-green-700')}>
-                            Sisa Gaji: {formatCurrency(selectedWorkerBalance)}
-                          </span>
+                    <ClipboardList className="h-8 w-8 text-blue-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Sisa Saldo */}
+              <Card className="bg-emerald-50 border-0 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-600">Sisa Saldo</p>
+                      <p className="text-2xl font-bold text-emerald-600 mt-1">
+                        {formatCurrency(summary.remainingBalance)}
+                      </p>
+                    </div>
+                    <Calculator className="h-8 w-8 text-emerald-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Two Side-by-Side Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Rincian Pendapatan */}
+              <Card className="shadow-lg border-0">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">
+                    Rincian Pendapatan {selectedWorker && `(${selectedWorker})`}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : workerIncomes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Tidak ada data pendapatan</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="font-semibold">Tanggal</TableHead>
+                            <TableHead className="font-semibold">Kode</TableHead>
+                            <TableHead className="font-semibold">Jobdesk</TableHead>
+                            <TableHead className="font-semibold text-right">Fee</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {workerIncomes.slice(0, 10).map((income) => (
+                            <TableRow key={income.id}>
+                              <TableCell className="text-sm">{formatDate(income.tanggal)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="font-mono text-xs">
+                                  {income.code || "-"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm">{income.jobdesk || "(Tanpa jobdesk)"}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(income.fee)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {workerIncomes.length > 10 && (
+                        <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                          +{workerIncomes.length - 10} data lainnya
                         </div>
-                        {selectedWorkerBalance <= 0 && (
-                          <p className="text-xs text-destructive mt-1">
-                            ⚠️ Tidak ada sisa gaji untuk diambil
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Jumlah</Label>
-                      <Input
-                        type="number"
-                        placeholder="Masukkan jumlah..."
-                        value={formData.amount}
-                        onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                      />
-                      {formData.amount && selectedWorkerBalance !== null && Number(formData.amount) > selectedWorkerBalance && (
-                        <p className="text-xs text-destructive">
-                          ⚠️ Jumlah melebihi sisa gaji ({formatCurrency(selectedWorkerBalance)})
-                        </p>
                       )}
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="catatan">Catatan (opsional)</Label>
-                      <Textarea
-                        placeholder="Masukkan catatan..."
-                        value={formData.catatan}
-                        onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
-                      />
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Rincian Pengambilan Gaji */}
+              <Card className="shadow-lg border-0">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">
+                    Rincian Pengambilan Gaji
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full"
-                      disabled={
-                        !formData.worker || 
-                        !formData.amount || 
-                        selectedWorkerBalance === null ||
-                        selectedWorkerBalance <= 0 ||
-                        Number(formData.amount) <= 0 ||
-                        Number(formData.amount) > selectedWorkerBalance
-                      }
-                    >
-                      Simpan
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
+                  ) : salaryWithdrawals.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Tidak ada pengambilan gaji</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="font-semibold">Tanggal</TableHead>
+                            <TableHead className="font-semibold text-right">Jumlah</TableHead>
+                            <TableHead className="font-semibold">Catatan</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {salaryWithdrawals.slice(0, 10).map((withdrawal) => (
+                            <TableRow key={withdrawal.id}>
+                              <TableCell className="text-sm">{formatDate(withdrawal.tanggal)}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(withdrawal.amount)}
+                              </TableCell>
+                              <TableCell className="text-sm">{withdrawal.catatan || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {salaryWithdrawals.length > 10 && (
+                        <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                          +{salaryWithdrawals.length - 10} data lainnya
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </main>
       </div>
