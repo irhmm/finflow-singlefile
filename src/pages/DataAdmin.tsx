@@ -191,21 +191,21 @@ const DataAdmin = () => {
             </div>
 
             {/* Table */}
-            <Card className="border-0 shadow-sm overflow-hidden">
+            <Card className="border border-border/30 shadow-lg rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 {/* Desktop Table */}
                 <Table className="hidden md:table">
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-12 text-center">No</TableHead>
-                      <TableHead>Nama Admin</TableHead>
-                      <TableHead className="text-center">Code</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead className="text-right">Gaji Pokok</TableHead>
-                      <TableHead>No. Rekening</TableHead>
-                      <TableHead>Nomor HP</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-center w-24">Aksi</TableHead>
+                    <TableRow className="bg-muted/60 border-b-2 border-border/30">
+                      <TableHead className="w-12 text-center px-6 py-4 font-bold text-foreground border-r border-border/10">No</TableHead>
+                      <TableHead className="px-6 py-4 font-bold text-foreground border-r border-border/10">Nama Admin</TableHead>
+                      <TableHead className="text-center px-6 py-4 font-bold text-foreground border-r border-border/10">Code</TableHead>
+                      <TableHead className="px-6 py-4 font-bold text-foreground border-r border-border/10">Role</TableHead>
+                      <TableHead className="text-right px-6 py-4 font-bold text-foreground border-r border-border/10">Gaji Pokok</TableHead>
+                      <TableHead className="px-6 py-4 font-bold text-foreground border-r border-border/10">No. Rekening</TableHead>
+                      <TableHead className="px-6 py-4 font-bold text-foreground border-r border-border/10">Nomor HP</TableHead>
+                      <TableHead className="text-center px-6 py-4 font-bold text-foreground border-r border-border/10">Status</TableHead>
+                      <TableHead className="text-center w-24 px-6 py-4 font-bold text-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -223,38 +223,38 @@ const DataAdmin = () => {
                       </TableRow>
                     ) : (
                       paginatedAdmins.map((admin, index) => (
-                        <TableRow key={admin.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="text-center font-medium text-muted-foreground">
+                        <TableRow key={admin.id} className="hover:bg-muted/40 transition-colors duration-200 border-b border-border/10">
+                          <TableCell className="text-center px-6 py-4 font-medium text-muted-foreground border-r border-border/10">
                             {(currentPage - 1) * itemsPerPage + index + 1}
                           </TableCell>
-                          <TableCell className="font-medium">{admin.nama}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="px-6 py-4 font-medium border-r border-border/10">{admin.nama}</TableCell>
+                          <TableCell className="text-center px-6 py-4 border-r border-border/10">
                             <Badge variant="outline" className="font-mono">
                               {admin.code}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="px-6 py-4 text-muted-foreground border-r border-border/10">
                             {admin.role || "-"}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right px-6 py-4 font-medium border-r border-border/10">
                             {formatCurrency(admin.gaji_pokok)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="px-6 py-4 text-muted-foreground border-r border-border/10">
                             {admin.no_rek || "-"}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="px-6 py-4 text-muted-foreground border-r border-border/10">
                             {admin.nomor || "-"}
                           </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={admin.status === "aktif" ? "default" : "secondary"} 
-                              className={admin.status === "aktif" 
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                              }>
+                          <TableCell className="text-center px-6 py-4 border-r border-border/10">
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border ${
+                              admin.status === "aktif"
+                                ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+                                : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+                            }`}>
                               {admin.status === "aktif" ? "Aktif" : "Non Aktif"}
-                            </Badge>
+                            </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="px-6 py-4">
                             <div className="flex justify-center gap-1">
                               <Button variant="ghost" size="icon" onClick={() => handleEdit(admin)}>
                                 <Pencil className="h-4 w-4 text-blue-500" />
@@ -278,19 +278,19 @@ const DataAdmin = () => {
                     <p className="text-center py-8 text-muted-foreground">Tidak ada data admin</p>
                   ) : (
                     paginatedAdmins.map((admin, index) => (
-                      <Card key={admin.id} className="p-4 space-y-3">
+                      <Card key={admin.id} className="p-4 space-y-3 border border-border/30 shadow-sm">
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm text-muted-foreground">#{(currentPage - 1) * itemsPerPage + index + 1}</span>
                               <Badge variant="outline" className="font-mono">{admin.code}</Badge>
-                              <Badge variant={admin.status === "aktif" ? "default" : "secondary"}
-                                className={admin.status === "aktif" 
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                }>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                admin.status === "aktif"
+                                  ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+                                  : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+                              }`}>
                                 {admin.status === "aktif" ? "Aktif" : "Non Aktif"}
-                              </Badge>
+                              </span>
                             </div>
                             <p className="font-semibold mt-1">{admin.nama}</p>
                           </div>
@@ -329,36 +329,73 @@ const DataAdmin = () => {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 p-4 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Prev
-                  </Button>
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="w-8"
-                      >
-                        {page}
-                      </Button>
-                    ))}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 border-t border-border/30 bg-muted/20">
+                  <span className="text-sm text-muted-foreground">
+                    Menampilkan {(currentPage - 1) * itemsPerPage + 1} sampai {Math.min(currentPage * itemsPerPage, filteredAdmins.length)} dari {filteredAdmins.length} data
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Prev
+                    </Button>
+                    <div className="flex gap-1">
+                      {totalPages <= 5 ? (
+                        Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-8"
+                          >
+                            {page}
+                          </Button>
+                        ))
+                      ) : (
+                        <>
+                          <Button
+                            variant={currentPage === 1 ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(1)}
+                            className="w-8"
+                          >
+                            1
+                          </Button>
+                          {currentPage > 3 && <span className="px-2 text-muted-foreground">...</span>}
+                          {currentPage > 2 && currentPage < totalPages && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-8"
+                            >
+                              {currentPage}
+                            </Button>
+                          )}
+                          {currentPage < totalPages - 2 && <span className="px-2 text-muted-foreground">...</span>}
+                          <Button
+                            variant={currentPage === totalPages ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(totalPages)}
+                            className="w-8"
+                          >
+                            {totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
                 </div>
               )}
             </Card>
