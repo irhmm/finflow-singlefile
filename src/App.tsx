@@ -13,6 +13,7 @@ import LaporanKeuangan from "./pages/LaporanKeuangan";
 import RekapGajiWorker from "./pages/RekapGajiWorker";
 import WorkerDone from "./pages/WorkerDone";
 import GajiAdmin from "./pages/GajiAdmin";
+import DataAdmin from "./pages/DataAdmin";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,11 @@ function AppContent() {
           <Route path="/gaji-admin" element={
             <ProtectedRoute requireSuperAdmin={true}>
               <GajiAdmin />
+            </ProtectedRoute>
+          } />
+          <Route path="/data-admin" element={
+            <ProtectedRoute requireSuperAdmin={true}>
+              <DataAdmin />
             </ProtectedRoute>
           } />
           <Route path="*" element={<NotFound />} />
