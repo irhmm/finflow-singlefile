@@ -111,141 +111,120 @@ const WorkerDone = () => {
       .join(' ');
   };
 
+  // Calculate net income (Total Income - Total Withdrawals)
+  // This ensures Worker Done page syncs with Rekap Gaji Worker
+  const calculateWorkerNetIncome = async (workerName: string, month: string) => {
+    const startDate = format(startOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
+
+    // Calculate total income from worker_income (case-insensitive query)
+    const { data: incomeData, error: incomeError } = await supabase
+      .from('worker_income')
+      .select('fee')
+      .ilike('worker', workerName)
+      .gte('tanggal', startDate)
+      .lte('tanggal', endDate);
+    
+    if (incomeError) {
+      console.error('Error calculating income:', incomeError);
+      return 0;
+    }
+    
+    const totalIncome = incomeData.reduce((sum, item) => sum + (Number(item.fee) || 0), 0);
+
+    // Calculate total withdrawals from salary_withdrawals (case-insensitive query)
+    const { data: withdrawalData, error: withdrawalError } = await supabase
+      .from('salary_withdrawals')
+      .select('amount')
+      .ilike('worker', workerName)
+      .gte('tanggal', startDate)
+      .lte('tanggal', endDate);
+    
+    if (withdrawalError) {
+      console.error('Error calculating withdrawals:', withdrawalError);
+      return totalIncome; // Return income only if withdrawal fetch fails
+    }
+    
+    const totalWithdrawals = withdrawalData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    
+    // Return net income (income - withdrawals)
+    return totalIncome - totalWithdrawals;
+  };
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // Get all unique workers from worker_income for selected month
       const startDate = format(startOfMonth(new Date(`${selectedMonth}-01`)), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(`${selectedMonth}-01`)), 'yyyy-MM-dd');
-      const year = parseInt(selectedMonth.split('-')[0]);
 
-      // BATCH QUERY 1: Fetch ALL worker incomes for the month (single query)
-      const { data: allIncomes, error: incomeError } = await supabase
+      const { data: workerIncomeData, error: workerError } = await supabase
         .from('worker_income')
-        .select('worker, fee')
+        .select('worker')
         .gte('tanggal', startDate)
         .lte('tanggal', endDate);
 
-      if (incomeError) throw incomeError;
+      if (workerError) throw workerError;
 
-      // BATCH QUERY 2: Fetch ALL withdrawals for the month (single query)
-      const { data: allWithdrawals, error: withdrawalError } = await supabase
-        .from('salary_withdrawals')
-        .select('worker, amount')
-        .gte('tanggal', startDate)
-        .lte('tanggal', endDate);
+      // Get unique normalized worker names
+      const uniqueWorkers = Array.from(
+        new Set(workerIncomeData?.map(w => normalizeWorkerName(w.worker)) || [])
+      );
 
-      if (withdrawalError) throw withdrawalError;
+      // Fetch or create worker_monthly_status for each worker
+      const workerStatusPromises = uniqueWorkers.map(async (workerName) => {
+        // Check if status exists
+        const { data: existingStatus, error: fetchError } = await supabase
+          .from('worker_monthly_status')
+          .select('*')
+          .eq('worker_name', workerName)
+          .eq('month', selectedMonth)
+          .maybeSingle();
 
-      // BATCH QUERY 3: Fetch ALL existing statuses for the month (single query)
-      const { data: existingStatuses, error: statusError } = await supabase
-        .from('worker_monthly_status')
-        .select('*')
-        .eq('month', selectedMonth);
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Error fetching status:', fetchError);
+          return null;
+        }
 
-      if (statusError) throw statusError;
+        // Calculate net income (income - withdrawals)
+        const netIncome = await calculateWorkerNetIncome(workerName, selectedMonth);
 
-      // Process data in JavaScript (fast, no network)
-      
-      // Group incomes by normalized worker name
-      const incomeByWorker = new Map<string, number>();
-      allIncomes?.forEach(item => {
-        const name = normalizeWorkerName(item.worker);
-        incomeByWorker.set(name, (incomeByWorker.get(name) || 0) + (Number(item.fee) || 0));
-      });
-
-      // Group withdrawals by normalized worker name
-      const withdrawalByWorker = new Map<string, number>();
-      allWithdrawals?.forEach(item => {
-        const name = normalizeWorkerName(item.worker);
-        withdrawalByWorker.set(name, (withdrawalByWorker.get(name) || 0) + (Number(item.amount) || 0));
-      });
-
-      // Create status map for quick lookup
-      const statusByWorker = new Map<string, WorkerMonthlyStatus>();
-      existingStatuses?.forEach(status => {
-        statusByWorker.set(status.worker_name, status as WorkerMonthlyStatus);
-      });
-
-      // Get unique worker names from income data
-      const uniqueWorkers = Array.from(incomeByWorker.keys());
-
-      // Prepare batch upsert data
-      const upsertData: Array<{
-        worker_name: string;
-        month: string;
-        year: number;
-        status: string;
-        total_income: number;
-      }> = [];
-
-      const workerStatuses: WorkerMonthlyStatus[] = [];
-
-      uniqueWorkers.forEach(workerName => {
-        const totalIncome = incomeByWorker.get(workerName) || 0;
-        const totalWithdrawals = withdrawalByWorker.get(workerName) || 0;
-        const netIncome = totalIncome - totalWithdrawals;
-        
-        const existingStatus = statusByWorker.get(workerName);
-        
         if (existingStatus) {
-          // Update if income changed
+          // Update total_income if different
           if (existingStatus.total_income !== netIncome) {
-            upsertData.push({
+            const { error: updateError } = await supabase
+              .from('worker_monthly_status')
+              .update({ total_income: netIncome })
+              .eq('id', existingStatus.id);
+
+            if (updateError) console.error('Error updating income:', updateError);
+          }
+          return { ...existingStatus, total_income: netIncome };
+        } else {
+          // Create new status
+          const year = parseInt(selectedMonth.split('-')[0]);
+          const { data: newStatus, error: insertError } = await supabase
+            .from('worker_monthly_status')
+            .insert({
               worker_name: workerName,
               month: selectedMonth,
               year: year,
-              status: existingStatus.status,
-              total_income: netIncome
-            });
+              status: 'proses',
+              total_income: netIncome,
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creating status:', insertError);
+            return null;
           }
-          workerStatuses.push({ ...existingStatus, total_income: netIncome });
-        } else {
-          // New status to create
-          upsertData.push({
-            worker_name: workerName,
-            month: selectedMonth,
-            year: year,
-            status: 'proses',
-            total_income: netIncome
-          });
-          workerStatuses.push({
-            id: `temp-${workerName}`,
-            worker_name: workerName,
-            month: selectedMonth,
-            year: year,
-            status: 'proses' as 'done' | 'proses',
-            total_income: netIncome,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+          return newStatus;
         }
       });
 
-      // BATCH QUERY 4: Upsert all status changes at once
-      if (upsertData.length > 0) {
-        const { data: upsertedData, error: upsertError } = await supabase
-          .from('worker_monthly_status')
-          .upsert(upsertData, { 
-            onConflict: 'worker_name,month',
-            ignoreDuplicates: false 
-          })
-          .select();
-
-        if (upsertError) {
-          console.error('Error upserting statuses:', upsertError);
-        } else if (upsertedData) {
-          // Update workerStatuses with real IDs from upserted data
-          upsertedData.forEach(upserted => {
-            const index = workerStatuses.findIndex(
-              w => w.worker_name === upserted.worker_name && w.id.startsWith('temp-')
-            );
-            if (index !== -1) {
-              workerStatuses[index] = upserted as WorkerMonthlyStatus;
-            }
-          });
-        }
-      }
-
+      const workerStatuses = (await Promise.all(workerStatusPromises)).filter(Boolean) as WorkerMonthlyStatus[];
+      
       // Sort by status first (proses/unpaid first, done/paid last), then by name
       workerStatuses.sort((a, b) => {
         if (a.status !== b.status) {
@@ -253,9 +232,9 @@ const WorkerDone = () => {
         }
         return a.worker_name.localeCompare(b.worker_name);
       });
-
+      
       setWorkers(workerStatuses);
-      setCurrentPage(1);
+      setCurrentPage(1); // Reset to first page when data changes
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
