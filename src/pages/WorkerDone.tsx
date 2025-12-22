@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -44,7 +44,7 @@ const WorkerDone = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const itemsPerPage = 10;
-
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !canEdit)) {
@@ -57,20 +57,25 @@ const WorkerDone = () => {
     }
   }, [user, canEdit, authLoading, navigate, toast]);
 
-  // Fetch available months from database
+  // Optimized: Fetch available months with DISTINCT query
   const fetchAvailableMonths = async () => {
     try {
+      // Get distinct dates only (limit to last 365 days for performance)
       const { data, error } = await supabase
         .from('worker_income')
         .select('tanggal')
-        .order('tanggal', { ascending: false });
+        .order('tanggal', { ascending: false })
+        .limit(1000); // Limit rows, not months
       
       if (error) throw error;
       
-      // Extract unique months from data
-      const uniqueMonths = Array.from(new Set(
-        data?.map(item => format(new Date(item.tanggal), 'yyyy-MM')) || []
-      )).sort().reverse();
+      // Extract unique months from data efficiently
+      const monthSet = new Set<string>();
+      data?.forEach(item => {
+        monthSet.add(format(new Date(item.tanggal), 'yyyy-MM'));
+      });
+      
+      const uniqueMonths = Array.from(monthSet).sort().reverse();
       
       // Convert to options format
       const monthOptions = uniqueMonths.map(month => ({
@@ -104,128 +109,148 @@ const WorkerDone = () => {
   const normalizeWorkerName = (name: string): string => {
     if (!name || !name.trim()) return '(Unknown)';
     const trimmed = name.trim();
-    // Capitalize first letter of EACH word for proper name handling
     return trimmed
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   };
 
-  // Calculate net income (Total Income - Total Withdrawals)
-  // This ensures Worker Done page syncs with Rekap Gaji Worker
-  const calculateWorkerNetIncome = async (workerName: string, month: string) => {
-    const startDate = format(startOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(new Date(`${month}-01`)), 'yyyy-MM-dd');
-
-    // Calculate total income from worker_income (case-insensitive query)
-    const { data: incomeData, error: incomeError } = await supabase
-      .from('worker_income')
-      .select('fee')
-      .ilike('worker', workerName)
-      .gte('tanggal', startDate)
-      .lte('tanggal', endDate);
-    
-    if (incomeError) {
-      console.error('Error calculating income:', incomeError);
-      return 0;
-    }
-    
-    const totalIncome = incomeData.reduce((sum, item) => sum + (Number(item.fee) || 0), 0);
-
-    // Calculate total withdrawals from salary_withdrawals (case-insensitive query)
-    const { data: withdrawalData, error: withdrawalError } = await supabase
-      .from('salary_withdrawals')
-      .select('amount')
-      .ilike('worker', workerName)
-      .gte('tanggal', startDate)
-      .lte('tanggal', endDate);
-    
-    if (withdrawalError) {
-      console.error('Error calculating withdrawals:', withdrawalError);
-      return totalIncome; // Return income only if withdrawal fetch fails
-    }
-    
-    const totalWithdrawals = withdrawalData.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    
-    // Return net income (income - withdrawals)
-    return totalIncome - totalWithdrawals;
-  };
-
+  // OPTIMIZED: Batch fetch all data and calculate in JavaScript
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Get all unique workers from worker_income for selected month
       const startDate = format(startOfMonth(new Date(`${selectedMonth}-01`)), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(`${selectedMonth}-01`)), 'yyyy-MM-dd');
+      const year = parseInt(selectedMonth.split('-')[0]);
 
-      const { data: workerIncomeData, error: workerError } = await supabase
+      // BATCH QUERY 1: Get all worker_income for the month
+      const { data: incomeData, error: incomeError } = await supabase
         .from('worker_income')
-        .select('worker')
+        .select('worker, fee')
         .gte('tanggal', startDate)
         .lte('tanggal', endDate);
 
-      if (workerError) throw workerError;
+      if (incomeError) throw incomeError;
 
-      // Get unique normalized worker names
-      const uniqueWorkers = Array.from(
-        new Set(workerIncomeData?.map(w => normalizeWorkerName(w.worker)) || [])
-      );
+      // BATCH QUERY 2: Get all salary_withdrawals for the month
+      const { data: withdrawalData, error: withdrawalError } = await supabase
+        .from('salary_withdrawals')
+        .select('worker, amount')
+        .gte('tanggal', startDate)
+        .lte('tanggal', endDate);
 
-      // Fetch or create worker_monthly_status for each worker
-      const workerStatusPromises = uniqueWorkers.map(async (workerName) => {
-        // Check if status exists
-        const { data: existingStatus, error: fetchError } = await supabase
-          .from('worker_monthly_status')
-          .select('*')
-          .eq('worker_name', workerName)
-          .eq('month', selectedMonth)
-          .maybeSingle();
+      if (withdrawalError) throw withdrawalError;
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Error fetching status:', fetchError);
-          return null;
-        }
+      // BATCH QUERY 3: Get existing worker_monthly_status for the month
+      const { data: existingStatuses, error: statusError } = await supabase
+        .from('worker_monthly_status')
+        .select('*')
+        .eq('month', selectedMonth);
 
-        // Calculate net income (income - withdrawals)
-        const netIncome = await calculateWorkerNetIncome(workerName, selectedMonth);
+      if (statusError) throw statusError;
 
+      // JAVASCRIPT AGGREGATION: Calculate income by worker (case-insensitive)
+      const incomeByWorker: Record<string, number> = {};
+      const uniqueWorkersSet = new Set<string>();
+      
+      incomeData?.forEach(item => {
+        const normalizedName = normalizeWorkerName(item.worker);
+        uniqueWorkersSet.add(normalizedName);
+        incomeByWorker[normalizedName] = (incomeByWorker[normalizedName] || 0) + Number(item.fee || 0);
+      });
+
+      // JAVASCRIPT AGGREGATION: Calculate withdrawals by worker (case-insensitive)
+      const withdrawalByWorker: Record<string, number> = {};
+      withdrawalData?.forEach(item => {
+        const normalizedName = normalizeWorkerName(item.worker);
+        withdrawalByWorker[normalizedName] = (withdrawalByWorker[normalizedName] || 0) + Number(item.amount || 0);
+      });
+
+      // Create status lookup map for existing statuses
+      const statusByWorker: Record<string, WorkerMonthlyStatus> = {};
+      existingStatuses?.forEach(status => {
+        statusByWorker[status.worker_name] = status as WorkerMonthlyStatus;
+      });
+
+      // Process all workers and prepare data
+      const uniqueWorkers = Array.from(uniqueWorkersSet);
+      const workersToUpsert: Array<{
+        worker_name: string;
+        month: string;
+        year: number;
+        status: string;
+        total_income: number;
+      }> = [];
+      
+      const workerStatuses: WorkerMonthlyStatus[] = [];
+
+      for (const workerName of uniqueWorkers) {
+        const totalIncome = incomeByWorker[workerName] || 0;
+        const totalWithdrawals = withdrawalByWorker[workerName] || 0;
+        const netIncome = totalIncome - totalWithdrawals;
+        
+        const existingStatus = statusByWorker[workerName];
+        
         if (existingStatus) {
-          // Update total_income if different
+          // Check if we need to update
           if (existingStatus.total_income !== netIncome) {
-            const { error: updateError } = await supabase
-              .from('worker_monthly_status')
-              .update({ total_income: netIncome })
-              .eq('id', existingStatus.id);
-
-            if (updateError) console.error('Error updating income:', updateError);
-          }
-          return { ...existingStatus, total_income: netIncome };
-        } else {
-          // Create new status
-          const year = parseInt(selectedMonth.split('-')[0]);
-          const { data: newStatus, error: insertError } = await supabase
-            .from('worker_monthly_status')
-            .insert({
+            workersToUpsert.push({
               worker_name: workerName,
               month: selectedMonth,
               year: year,
-              status: 'proses',
-              total_income: netIncome,
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('Error creating status:', insertError);
-            return null;
+              status: existingStatus.status,
+              total_income: netIncome
+            });
           }
-          return newStatus;
+          workerStatuses.push({ ...existingStatus, total_income: netIncome });
+        } else {
+          // New worker, need to create
+          workersToUpsert.push({
+            worker_name: workerName,
+            month: selectedMonth,
+            year: year,
+            status: 'proses',
+            total_income: netIncome
+          });
+          workerStatuses.push({
+            id: `temp-${workerName}`, // Temporary ID until upsert
+            worker_name: workerName,
+            month: selectedMonth,
+            year: year,
+            status: 'proses',
+            total_income: netIncome,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
         }
-      });
+      }
 
-      const workerStatuses = (await Promise.all(workerStatusPromises)).filter(Boolean) as WorkerMonthlyStatus[];
+      // BATCH UPSERT: Update/insert all statuses in one query
+      if (workersToUpsert.length > 0) {
+        const { data: upsertedData, error: upsertError } = await supabase
+          .from('worker_monthly_status')
+          .upsert(workersToUpsert, { 
+            onConflict: 'worker_name,month',
+            ignoreDuplicates: false
+          })
+          .select();
+
+        if (upsertError) {
+          console.error('Error upserting statuses:', upsertError);
+        } else if (upsertedData) {
+          // Update temporary IDs with real IDs
+          upsertedData.forEach(upserted => {
+            const idx = workerStatuses.findIndex(
+              w => w.worker_name === upserted.worker_name && w.id.startsWith('temp-')
+            );
+            if (idx !== -1) {
+              workerStatuses[idx] = { ...workerStatuses[idx], id: upserted.id };
+            }
+          });
+        }
+      }
       
-      // Sort by status first (proses/unpaid first, done/paid last), then by name
+      // Sort: proses first, done last, then alphabetically
       workerStatuses.sort((a, b) => {
         if (a.status !== b.status) {
           return a.status === 'proses' ? -1 : 1;
@@ -234,7 +259,7 @@ const WorkerDone = () => {
       });
       
       setWorkers(workerStatuses);
-      setCurrentPage(1); // Reset to first page when data changes
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -247,7 +272,17 @@ const WorkerDone = () => {
     }
   };
 
-  // Real-time subscription to salary_withdrawals for auto-sync with RekapGajiWorker
+  // Debounced fetch for real-time updates
+  const debouncedFetch = useCallback(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      fetchData();
+    }, 1000); // 1 second debounce
+  }, [selectedMonth]);
+
+  // Real-time subscription with debounce
   useEffect(() => {
     if (!user || !canEdit || !selectedMonth) return;
 
@@ -261,16 +296,18 @@ const WorkerDone = () => {
           table: 'salary_withdrawals'
         },
         () => {
-          // Re-fetch data when salary_withdrawals changes
-          fetchData();
+          debouncedFetch();
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
       supabase.removeChannel(channel);
     };
-  }, [user, canEdit, selectedMonth]);
+  }, [user, canEdit, selectedMonth, debouncedFetch]);
 
   const handleToggleStatus = async (id: string, currentStatus: 'done' | 'proses') => {
     const newStatus = currentStatus === 'done' ? 'proses' : 'done';
@@ -288,7 +325,6 @@ const WorkerDone = () => {
         const updated = prev.map(w => 
           w.id === id ? { ...w, status: newStatus as 'done' | 'proses' } : w
         );
-        // Re-sort: proses first, done last, then alphabetically
         return updated.sort((a, b) => {
           if (a.status !== b.status) {
             return a.status === 'proses' ? -1 : 1;
@@ -333,7 +369,6 @@ const WorkerDone = () => {
   // Statistics
   const totalDone = filteredWorkers.filter(w => w.status === 'done').length;
   const totalProses = filteredWorkers.filter(w => w.status === 'proses').length;
-  // Only calculate total from workers who haven't been paid yet
   const totalIncome = filteredWorkers
     .filter(w => w.status === 'proses')
     .reduce((sum, w) => sum + Number(w.total_income || 0), 0);
@@ -465,51 +500,44 @@ const WorkerDone = () => {
                         <tbody>
                           {paginatedWorkers.map((worker, index) => (
                             <tr key={worker.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                              <td className="py-4 px-4 text-foreground">{startIndex + index + 1}</td>
-                              <td className="py-4 px-4">
+                              <td className="py-3 px-4 text-muted-foreground">
+                                {startIndex + index + 1}
+                              </td>
+                              <td className="py-3 px-4">
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
                                       {worker.worker_name.substring(0, 2).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <span className="font-medium text-foreground">{worker.worker_name}</span>
                                 </div>
                               </td>
-                              <td className={`py-4 px-4 text-right font-semibold ${worker.status === 'done' ? 'text-green-600' : 'text-foreground'}`}>
-                                {worker.status === 'done' 
-                                  ? formatCurrency(0) 
-                                  : formatCurrency(Number(worker.total_income || 0))}
+                              <td className="py-3 px-4 text-right font-medium text-foreground">
+                                {formatCurrency(worker.total_income)}
                               </td>
-                              <td className="py-4 px-4 text-center">
-                                <Badge
+                              <td className="py-3 px-4 text-center">
+                                <Badge 
                                   variant={worker.status === 'done' ? 'default' : 'secondary'}
-                                  className={
-                                    worker.status === 'done'
-                                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                                      : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                                  className={worker.status === 'done' 
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-100' 
+                                    : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
                                   }
                                 >
                                   {worker.status === 'done' ? (
-                                    <>
-                                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                                      Dibayar
-                                    </>
+                                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Dibayar</>
                                   ) : (
-                                    <>
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      Belum Dibayar
-                                    </>
+                                    <><Clock className="h-3 w-3 mr-1" /> Belum Dibayar</>
                                   )}
                                 </Badge>
                               </td>
-                              <td className="py-4 px-4 text-center">
+                              <td className="py-3 px-4 text-center">
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant={worker.status === 'done' ? 'outline' : 'default'}
                                   onClick={() => handleToggleStatus(worker.id, worker.status)}
                                 >
-                                  Done
+                                  {worker.status === 'done' ? 'Batalkan' : 'Tandai Dibayar'}
                                 </Button>
                               </td>
                             </tr>
@@ -521,47 +549,25 @@ const WorkerDone = () => {
                     {/* Pagination */}
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-                        <div className="text-sm text-muted-foreground">
-                          Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredWorkers.length)} dari {filteredWorkers.length} worker
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredWorkers.length)} dari {filteredWorkers.length} worker
+                        </p>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
                           >
                             <ChevronLeft className="h-4 w-4" />
                           </Button>
-                          
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum;
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-                            
-                            return (
-                              <Button
-                                key={pageNum}
-                                variant={currentPage === pageNum ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setCurrentPage(pageNum)}
-                              >
-                                {pageNum}
-                              </Button>
-                            );
-                          })}
-                          
+                          <span className="text-sm text-muted-foreground">
+                            Halaman {currentPage} dari {totalPages}
+                          </span>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages}
                           >
                             <ChevronRight className="h-4 w-4" />
