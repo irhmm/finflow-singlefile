@@ -88,8 +88,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       return;
     }
     
-    if (userRole === 'admin' && tab && !['worker_income', 'admin_income'].includes(tab)) {
-      // Admin: only worker_income and admin_income
+    if (userRole === 'admin' && tab && !['worker_income'].includes(tab)) {
+      // Admin: only worker_income (admin_income requires admin_keuangan or super_admin)
       window.history.replaceState({}, '', '/?tab=worker_income');
       setActiveTable('worker_income');
       return;
