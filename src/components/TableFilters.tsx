@@ -28,9 +28,9 @@ interface TableFiltersProps {
   onFiltersChange: (filters: FilterOptions) => void;
   availableCodes: string[];
   availableWorkers: string[];
-  availableMonths: { value: string; label: string; }[];
+  availableMonths: { value: string; label: string }[];
   exportData: any[];
-  tableType: "admin_income" | "worker_income" | "workers";
+  tableType: "admin_income" | "worker_income" | "workers" | "expenses";
   className?: string;
 }
 

@@ -37,6 +37,10 @@ interface DataTableProps {
   filters?: FilterOptions;
   onFiltersChange?: (filters: FilterOptions) => void;
   filteredData?: DataRecord[];
+  // New props for filter options from database
+  availableCodes?: string[];
+  availableWorkers?: string[];
+  availableMonths?: { value: string; label: string }[];
 }
 
 export function DataTable({ 
@@ -54,7 +58,10 @@ export function DataTable({
   onSearchChange,
   filters = { searchQuery: "", selectedCode: "all", selectedWorker: "all", selectedMonth: "all", selectedRole: "all", selectedStatus: "all" },
   onFiltersChange,
-  filteredData = []
+  filteredData = [],
+  availableCodes = [],
+  availableWorkers = [],
+  availableMonths = []
 }: DataTableProps) {
   // Use special component for worker_income table
   if (tableType === "worker_income") {
@@ -74,6 +81,9 @@ export function DataTable({
         filters={filters}
         onFiltersChange={onFiltersChange}
         filteredData={filteredData as WorkerIncome[]}
+        availableCodes={availableCodes}
+        availableWorkers={availableWorkers}
+        availableMonths={availableMonths}
       />
     );
   }
@@ -233,34 +243,6 @@ export function DataTable({
     }
   };
 
-  // Prepare filter data
-  const getAvailableCodes = () => {
-    return Array.from(new Set(
-      data.map((record) => {
-        if (tableType === "admin_income") return (record as AdminIncome).code;
-        return "";
-      }).filter(Boolean)
-    )).sort();
-  };
-
-  const getAvailableMonths = () => {
-    const months = Array.from(new Set(
-      data.map((record) => {
-        const date = new Date((record as any).tanggal);
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      })
-    )).sort().reverse();
-
-    return months.map(monthYear => {
-      const [year, month] = monthYear.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return {
-        value: monthYear,
-        label: date.toLocaleDateString("id-ID", { month: 'long', year: 'numeric' })
-      };
-    });
-  };
-
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
@@ -273,11 +255,11 @@ export function DataTable({
           onSearchChange={onSearchChange}
           filters={filters}
           onFiltersChange={onFiltersChange}
-          availableCodes={getAvailableCodes()}
-          availableWorkers={[]}
-          availableMonths={getAvailableMonths()}
+          availableCodes={availableCodes}
+          availableWorkers={availableWorkers}
+          availableMonths={availableMonths}
           exportData={filteredData.length > 0 ? filteredData : data}
-          tableType={tableType as "admin_income" | "worker_income"}
+          tableType={tableType as "admin_income" | "worker_income" | "workers"}
           className="mb-6"
         />
       )}
