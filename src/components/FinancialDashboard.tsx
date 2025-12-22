@@ -103,8 +103,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       setActiveTable(defaultTable);
     }
   }, [user, userRole, isAdmin]);
+
   const [data, setData] = useState<DataRecord[]>([]);
-  const [filteredData, setFilteredData] = useState<DataRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterOptions>({
@@ -126,6 +126,17 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<DataRecord | null>(null);
+  
+  // Filter options from database (not from paginated data)
+  const [filterOptions, setFilterOptions] = useState<{
+    codes: string[];
+    workers: string[];
+    months: { value: string; label: string }[];
+  }>({
+    codes: [],
+    workers: [],
+    months: []
+  });
 
   // Helper function to normalize worker names
   const normalizeWorkerName = (name: string): string => {
@@ -146,7 +157,131 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     };
   };
 
-  // Load data for active table with server-side pagination
+  // Load filter options from database (separate from paginated data)
+  const loadFilterOptions = async () => {
+    try {
+      if (activeTable === 'worker_income') {
+        // Fetch all unique codes, workers, and months from database
+        const [codesRes, workersRes, monthsRes] = await Promise.all([
+          supabase.from('worker_income').select('code'),
+          supabase.from('worker_income').select('worker'),
+          supabase.from('worker_income').select('tanggal')
+        ]);
+
+        // Extract unique codes
+        const codes = [...new Set(
+          (codesRes.data || [])
+            .map(r => (r.code || '').trim())
+            .filter(Boolean)
+        )].sort();
+
+        // Extract unique workers with proper casing
+        const workerMap = new Map<string, string>();
+        (workersRes.data || []).forEach(r => {
+          const worker = (r.worker || '').trim();
+          if (worker) {
+            const normalizedKey = worker.toLowerCase();
+            if (!workerMap.has(normalizedKey)) {
+              workerMap.set(normalizedKey, normalizeWorkerName(worker));
+            }
+          }
+        });
+        const workers = Array.from(workerMap.values()).sort();
+
+        // Extract unique months
+        const monthSet = new Set<string>();
+        (monthsRes.data || []).forEach(r => {
+          if (r.tanggal) {
+            const d = new Date(r.tanggal);
+            monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          }
+        });
+        const months = Array.from(monthSet)
+          .sort()
+          .reverse()
+          .map(m => {
+            const [year, month] = m.split('-');
+            return {
+              value: m,
+              label: new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { 
+                month: 'long', 
+                year: 'numeric' 
+              })
+            };
+          });
+
+        setFilterOptions({ codes, workers, months });
+      } else if (activeTable === 'admin_income') {
+        const [codesRes, monthsRes] = await Promise.all([
+          supabase.from('admin_income').select('code'),
+          supabase.from('admin_income').select('tanggal')
+        ]);
+
+        const codes = [...new Set(
+          (codesRes.data || [])
+            .map(r => (r.code || '').trim())
+            .filter(Boolean)
+        )].sort();
+
+        const monthSet = new Set<string>();
+        (monthsRes.data || []).forEach(r => {
+          if (r.tanggal) {
+            const d = new Date(r.tanggal);
+            monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          }
+        });
+        const months = Array.from(monthSet)
+          .sort()
+          .reverse()
+          .map(m => {
+            const [year, month] = m.split('-');
+            return {
+              value: m,
+              label: new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { 
+                month: 'long', 
+                year: 'numeric' 
+              })
+            };
+          });
+
+        setFilterOptions({ codes, workers: [], months });
+      } else if (activeTable === 'expenses') {
+        const monthsRes = await supabase.from('expenses').select('tanggal');
+
+        const monthSet = new Set<string>();
+        (monthsRes.data || []).forEach(r => {
+          if (r.tanggal) {
+            const d = new Date(r.tanggal);
+            monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          }
+        });
+        const months = Array.from(monthSet)
+          .sort()
+          .reverse()
+          .map(m => {
+            const [year, month] = m.split('-');
+            return {
+              value: m,
+              label: new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { 
+                month: 'long', 
+                year: 'numeric' 
+              })
+            };
+          });
+
+        setFilterOptions({ codes: [], workers: [], months });
+      }
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Load filter options when table changes
+  useEffect(() => {
+    loadFilterOptions();
+  }, [activeTable]);
+
+  // Load data for active table with server-side pagination AND filtering
   const loadData = async () => {
     setLoading(true);
     try {
@@ -154,26 +289,32 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       const endIndex = startIndex + itemsPerPage - 1;
       const monthRange = getCurrentMonthRange();
 
-      // Special handling for workers table to normalize data
       if (activeTable === 'workers') {
-        // Parallel queries: paginated data + total count summary
-        const [paginatedResult, summaryResult] = await Promise.all([
-          supabase
-            .from('workers')
-            .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at', { count: 'exact' })
-            .order('id', { ascending: false })
-            .range(startIndex, endIndex),
-          supabase
-            .from('workers')
-            .select('*', { count: 'exact', head: true })
-        ]);
+        let query = supabase
+          .from('workers')
+          .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at', { count: 'exact' });
 
-        if (paginatedResult.error) {
-          console.error("Supabase error:", paginatedResult.error);
-          throw paginatedResult.error;
+        // Apply server-side filters
+        if (filters.selectedRole && filters.selectedRole !== 'all') {
+          query = query.ilike('role', filters.selectedRole);
+        }
+        if (filters.selectedStatus && filters.selectedStatus !== 'all') {
+          query = query.ilike('status', filters.selectedStatus);
+        }
+        if (searchQuery.trim()) {
+          query = query.or(`nama.ilike.%${searchQuery}%,role.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%`);
         }
 
-        // Normalize worker data to handle empty strings
+        // Apply pagination
+        query = query.order('id', { ascending: false }).range(startIndex, endIndex);
+
+        const [paginatedResult, summaryResult] = await Promise.all([
+          query,
+          supabase.from('workers').select('*', { count: 'exact', head: true })
+        ]);
+
+        if (paginatedResult.error) throw paginatedResult.error;
+
         const normalized = (paginatedResult.data || []).map(r => ({
           ...r,
           nama: (r.nama || '').trim() || '(Tanpa Nama)',
@@ -184,20 +325,34 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         }));
 
         setData(normalized);
-        setFilteredData(normalized);
         setTotalCount(paginatedResult.count || 0);
-        setSummaryData({
-          totalCount: summaryResult.count || 0,
-          totalNominal: 0
-        });
+        setSummaryData({ totalCount: summaryResult.count || 0, totalNominal: 0 });
+
       } else if (activeTable === 'admin_income') {
-        // Parallel queries: paginated data + current month summary
+        let query = supabase
+          .from('admin_income')
+          .select('*', { count: 'exact' });
+
+        // Apply server-side filters
+        if (filters.selectedCode && filters.selectedCode !== 'all') {
+          query = query.eq('code', filters.selectedCode);
+        }
+        if (filters.selectedMonth && filters.selectedMonth !== 'all') {
+          const [year, month] = filters.selectedMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+          query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+        }
+        if (searchQuery.trim()) {
+          query = query.or(`code.ilike.%${searchQuery}%,nominal.ilike.%${searchQuery}%`);
+        }
+
+        // Apply pagination
+        query = query.order('tanggal', { ascending: false }).range(startIndex, endIndex);
+
         const [paginatedResult, summaryResult] = await Promise.all([
-          supabase
-            .from('admin_income')
-            .select('*', { count: 'exact' })
-            .order('tanggal', { ascending: false })
-            .range(startIndex, endIndex),
+          query,
           supabase
             .from('admin_income')
             .select('nominal')
@@ -207,7 +362,6 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
         if (paginatedResult.error) throw paginatedResult.error;
 
-        // Normalize admin_income data
         const normalized = (paginatedResult.data || []).map(r => ({
           ...r,
           code: (r.code || '').trim() || null,
@@ -219,27 +373,68 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         );
 
         setData(normalized);
-        setFilteredData(normalized);
         setTotalCount(paginatedResult.count || 0);
         setSummaryData({ totalCount: 0, totalNominal });
+
       } else if (activeTable === 'worker_income') {
-        // Parallel queries: paginated data + current month summary
+        let query = supabase
+          .from('worker_income')
+          .select('*', { count: 'exact' });
+
+        // Apply server-side filters
+        if (filters.selectedCode && filters.selectedCode !== 'all') {
+          query = query.eq('code', filters.selectedCode);
+        }
+        if (filters.selectedWorker && filters.selectedWorker !== 'all') {
+          query = query.ilike('worker', filters.selectedWorker);
+        }
+        if (filters.selectedMonth && filters.selectedMonth !== 'all') {
+          const [year, month] = filters.selectedMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+          query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+        }
+        if (searchQuery.trim()) {
+          query = query.or(`code.ilike.%${searchQuery}%,worker.ilike.%${searchQuery}%,jobdesk.ilike.%${searchQuery}%`);
+        }
+
+        // Apply pagination
+        query = query.order('tanggal', { ascending: false }).range(startIndex, endIndex);
+
+        // Also calculate filtered total for summary
+        let summaryQuery = supabase
+          .from('worker_income')
+          .select('fee');
+
+        // Apply same filters to summary query
+        if (filters.selectedCode && filters.selectedCode !== 'all') {
+          summaryQuery = summaryQuery.eq('code', filters.selectedCode);
+        }
+        if (filters.selectedWorker && filters.selectedWorker !== 'all') {
+          summaryQuery = summaryQuery.ilike('worker', filters.selectedWorker);
+        }
+        if (filters.selectedMonth && filters.selectedMonth !== 'all') {
+          const [year, month] = filters.selectedMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+          summaryQuery = summaryQuery.gte('tanggal', startDate).lte('tanggal', endDate);
+        } else {
+          // If no month filter, use current month for summary
+          summaryQuery = summaryQuery.gte('tanggal', monthRange.start).lte('tanggal', monthRange.end);
+        }
+        if (searchQuery.trim()) {
+          summaryQuery = summaryQuery.or(`code.ilike.%${searchQuery}%,worker.ilike.%${searchQuery}%,jobdesk.ilike.%${searchQuery}%`);
+        }
+
         const [paginatedResult, summaryResult] = await Promise.all([
-          supabase
-            .from('worker_income')
-            .select('*', { count: 'exact' })
-            .order('tanggal', { ascending: false })
-            .range(startIndex, endIndex),
-          supabase
-            .from('worker_income')
-            .select('fee')
-            .gte('tanggal', monthRange.start)
-            .lte('tanggal', monthRange.end)
+          query,
+          summaryQuery
         ]);
 
         if (paginatedResult.error) throw paginatedResult.error;
 
-        // Normalize worker_income data with case-insensitive worker names
         const normalized = (paginatedResult.data || []).map(r => ({
           ...r,
           code: (r.code || '').trim() || 'NO_CODE',
@@ -253,17 +448,32 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         );
 
         setData(normalized);
-        setFilteredData(normalized);
         setTotalCount(paginatedResult.count || 0);
         setSummaryData({ totalCount: 0, totalNominal });
+
       } else {
-        // Standard fetch for other tables (expenses) with summary
+        // expenses table
+        let query = supabase
+          .from('expenses')
+          .select('*', { count: 'exact' });
+
+        // Apply server-side filters
+        if (filters.selectedMonth && filters.selectedMonth !== 'all') {
+          const [year, month] = filters.selectedMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+          query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+        }
+        if (searchQuery.trim()) {
+          query = query.or(`keterangan.ilike.%${searchQuery}%`);
+        }
+
+        // Apply pagination
+        query = query.order('tanggal', { ascending: false }).range(startIndex, endIndex);
+
         const [paginatedResult, summaryResult] = await Promise.all([
-          supabase
-            .from(activeTable)
-            .select("*", { count: 'exact' })
-            .order("tanggal", { ascending: false })
-            .range(startIndex, endIndex),
+          query,
           supabase
             .from('expenses')
             .select('nominal')
@@ -271,24 +481,19 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             .lte('tanggal', monthRange.end)
         ]);
 
-        if (paginatedResult.error) {
-          console.error("Supabase error:", paginatedResult.error);
-          throw paginatedResult.error;
-        }
+        if (paginatedResult.error) throw paginatedResult.error;
 
         const totalNominal = (summaryResult.data || []).reduce(
           (sum, r) => sum + Number(r.nominal || 0), 0
         );
-        
+
         setData(paginatedResult.data || []);
-        setFilteredData(paginatedResult.data || []);
         setTotalCount(paginatedResult.count || 0);
         setSummaryData({ totalCount: 0, totalNominal });
       }
     } catch (error: any) {
       console.error("Error loading data:", error);
       
-      // Provide specific error messages
       let errorMessage = "Gagal memuat data";
       if (error?.message?.includes("JWT")) {
         errorMessage = "Sesi Anda telah berakhir. Silakan login kembali.";
@@ -309,10 +514,10 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   };
 
   // Set up real-time subscription with debouncing
+  // Include filters and searchQuery as dependencies
   useEffect(() => {
     loadData();
 
-    // Create debounced version of loadData to prevent rapid re-fetches
     const debouncedLoadData = debounce(() => {
       loadData();
     }, 300);
@@ -335,84 +540,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeTable, currentPage]);
-
-  // Advanced filtering functionality
-  useEffect(() => {
-    let filtered = [...data];
-
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((record) => {
-        switch (activeTable) {
-          case "admin_income":
-            const adminRecord = record as AdminIncome;
-            return (
-              (adminRecord.tanggal && adminRecord.tanggal.toLowerCase().includes(query)) ||
-              (adminRecord.code && adminRecord.code.toLowerCase().includes(query)) ||
-              (adminRecord.nominal && adminRecord.nominal.toString().includes(query))
-            );
-          case "worker_income":
-            const workerIncomeRecord = record as WorkerIncome;
-            return (
-              (workerIncomeRecord.tanggal && workerIncomeRecord.tanggal.toLowerCase().includes(query)) ||
-              (workerIncomeRecord.code && workerIncomeRecord.code.toLowerCase().includes(query)) ||
-              (workerIncomeRecord.jobdesk && workerIncomeRecord.jobdesk.toLowerCase().includes(query)) ||
-              (workerIncomeRecord.worker && workerIncomeRecord.worker.toLowerCase().includes(query)) ||
-              (workerIncomeRecord.fee && workerIncomeRecord.fee.toString().includes(query))
-            );
-          case "expenses":
-            const expenseRecord = record as Expense;
-            return (
-              (expenseRecord.tanggal && expenseRecord.tanggal.toLowerCase().includes(query)) ||
-              (expenseRecord.keterangan && expenseRecord.keterangan.toLowerCase().includes(query)) ||
-              (expenseRecord.nominal && expenseRecord.nominal.toString().includes(query))
-            );
-          case "workers":
-            const dataWorkerRecord = record as Worker;
-            return (
-              (dataWorkerRecord.nama && dataWorkerRecord.nama.toLowerCase().includes(query)) ||
-              (dataWorkerRecord.rekening && dataWorkerRecord.rekening.toLowerCase().includes(query)) ||
-              (dataWorkerRecord.nomor_wa && dataWorkerRecord.nomor_wa.toLowerCase().includes(query)) ||
-              (dataWorkerRecord.role && dataWorkerRecord.role.toLowerCase().includes(query)) ||
-              (dataWorkerRecord.status && dataWorkerRecord.status.toLowerCase().includes(query))
-            );
-          default:
-            return false;
-        }
-      });
-    }
-
-    // Apply filters
-    if (filters.selectedCode && filters.selectedCode !== "all") {
-      filtered = filtered.filter((record) => {
-        if (activeTable === "admin_income") {
-          return (record as AdminIncome).code === filters.selectedCode;
-        } else if (activeTable === "worker_income") {
-          return (record as WorkerIncome).code === filters.selectedCode;
-        }
-        return true;
-      });
-    }
-
-    if (filters.selectedWorker && filters.selectedWorker !== "all" && activeTable === "worker_income") {
-      filtered = filtered.filter((record) => {
-        const workerName = (record as WorkerIncome).worker || '';
-        return workerName.toLowerCase() === filters.selectedWorker.toLowerCase();
-      });
-    }
-
-    if (filters.selectedMonth && filters.selectedMonth !== "all") {
-      filtered = filtered.filter((record) => {
-        const date = new Date((record as any).tanggal);
-        const recordMonthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        return recordMonthYear === filters.selectedMonth;
-      });
-    }
-
-    setFilteredData(filtered);
-  }, [searchQuery, filters, data, activeTable]);
+  }, [activeTable, currentPage, filters, searchQuery]);
 
   // Reset search and filters when table changes
   useEffect(() => {
@@ -438,8 +566,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  // Data is already paginated from server, no need to slice
-  const currentData = filteredData;
+  const currentData = data;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -488,7 +615,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     }
   };
 
-  // Check if any filters are applied (excluding search)
+  // Check if any filters are applied
   const hasActiveFilters = filters.selectedCode !== "all" || 
                     filters.selectedWorker !== "all" || 
                     filters.selectedMonth !== "all" || 
@@ -496,27 +623,10 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
                     filters.selectedStatus !== "all" ||
                     searchQuery.trim() !== "";
 
-  const calculateFilteredTotal = () => {
-    // Calculate from filtered data only when filters are active
-    return filteredData.reduce((total, record) => {
-      if (activeTable === "worker_income") {
-        const fee = (record as WorkerIncome).fee;
-        return total + (fee && !isNaN(fee) ? fee : 0);
-      }
-      if (activeTable === "workers") {
-        return total + 1; // Count workers
-      }
-      const nominal = (record as AdminIncome | Expense).nominal;
-      return total + (nominal && !isNaN(nominal) ? nominal : 0);
-    }, 0);
-  };
-
   const getSummaryDisplay = () => {
     if (activeTable === "workers") {
-      // For workers: show total count from database
       return `${summaryData.totalCount} Worker`;
     }
-    // For income/expenses: show total nominal from current month
     return `Rp ${summaryData.totalNominal.toLocaleString("id-ID")}`;
   };
 
@@ -580,7 +690,6 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               )}
             </div>
 
-
             {/* Show total for worker_income in public mode only when both month and worker filters are selected */}
             {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
@@ -592,39 +701,31 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
                   }
                 </h3>
                 <p className="text-4xl font-bold text-header">
-                  {hasActiveFilters 
-                    ? (activeTable === "workers" 
-                        ? `${filteredData.length} Worker`
-                        : `Rp ${calculateFilteredTotal().toLocaleString("id-ID")}`)
-                    : getSummaryDisplay()
-                  }
+                  {getSummaryDisplay()}
                 </p>
-                {hasActiveFilters && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    dari {getSummaryDisplay()} total {activeTable === "workers" ? "" : "bulan ini"}
-                  </p>
-                )}
               </Card>
             )}
 
-        <DataTable
-          data={currentData}
-          tableType={activeTable}
-          loading={loading}
-          onEdit={canEdit ? handleEdit : undefined}
-          onDelete={canEdit ? handleDelete : undefined}
-          isReadOnly={!canEdit}
-          totalItems={totalItems}
-          currentPage={currentPage}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          filters={filters}
-          onFiltersChange={setFilters}
-          filteredData={filteredData}
-        />
-
+            <DataTable
+              data={currentData}
+              tableType={activeTable}
+              loading={loading}
+              onEdit={canEdit ? handleEdit : undefined}
+              onDelete={canEdit ? handleDelete : undefined}
+              isReadOnly={!canEdit}
+              totalItems={totalItems}
+              currentPage={currentPage}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              filters={filters}
+              onFiltersChange={setFilters}
+              filteredData={data}
+              availableCodes={filterOptions.codes}
+              availableWorkers={filterOptions.workers}
+              availableMonths={filterOptions.months}
+            />
           </div>
 
           {canEdit && (

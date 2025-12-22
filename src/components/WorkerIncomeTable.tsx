@@ -38,6 +38,10 @@ interface WorkerIncomeTableProps {
   filters?: FilterOptions;
   onFiltersChange?: (filters: FilterOptions) => void;
   filteredData?: WorkerIncome[];
+  // New props for filter options from database
+  availableCodes?: string[];
+  availableWorkers?: string[];
+  availableMonths?: { value: string; label: string }[];
 }
 
 export function WorkerIncomeTable({ 
@@ -54,7 +58,10 @@ export function WorkerIncomeTable({
   onSearchChange,
   filters = { searchQuery: "", selectedCode: "all", selectedWorker: "all", selectedMonth: "all", selectedRole: "all", selectedStatus: "all" },
   onFiltersChange,
-  filteredData = []
+  filteredData = [],
+  availableCodes = [],
+  availableWorkers = [],
+  availableMonths = []
 }: WorkerIncomeTableProps) {
   const { isAdmin } = useAuth();
   const formatDate = (dateString: string) => {
@@ -124,17 +131,34 @@ export function WorkerIncomeTable({
 
   if (data.length === 0) {
     return (
-      <Card className="p-8 bg-gradient-to-br from-card to-muted/20 border-dashed">
-        <div className="flex flex-col items-center justify-center h-32 space-y-2">
-          <Calendar className="h-12 w-12 text-muted-foreground/50" />
-          <div className="text-muted-foreground text-lg">Belum ada data pendapatan</div>
-          <div className="text-muted-foreground/70 text-sm">
-            {searchQuery || filters.selectedCode !== "all" || filters.selectedWorker !== "all" || filters.selectedMonth !== "all" 
-              ? "Tidak ada data yang sesuai dengan filter. Coba ubah filter Anda."
-              : "Data akan muncul setelah ditambahkan"}
+      <div className="space-y-6">
+        {/* Show filters even when no data */}
+        {onSearchChange && onFiltersChange && (
+          <TableFilters
+            searchQuery={searchQuery}
+            onSearchChange={onSearchChange}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            availableCodes={availableCodes}
+            availableWorkers={availableWorkers}
+            availableMonths={availableMonths}
+            exportData={[]}
+            tableType="worker_income"
+            className="mb-6"
+          />
+        )}
+        <Card className="p-8 bg-gradient-to-br from-card to-muted/20 border-dashed">
+          <div className="flex flex-col items-center justify-center h-32 space-y-2">
+            <Calendar className="h-12 w-12 text-muted-foreground/50" />
+            <div className="text-muted-foreground text-lg">Belum ada data pendapatan</div>
+            <div className="text-muted-foreground/70 text-sm">
+              {searchQuery || filters.selectedCode !== "all" || filters.selectedWorker !== "all" || filters.selectedMonth !== "all" 
+                ? "Tidak ada data yang sesuai dengan filter. Coba ubah filter Anda."
+                : "Data akan muncul setelah ditambahkan"}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     );
   }
 
@@ -204,14 +228,15 @@ export function WorkerIncomeTable({
     );
   };
 
-  // Prepare filter data
+  // Use props for filter options (from database), fallback to data if not provided
   const getAvailableCodes = () => {
+    if (availableCodes.length > 0) return availableCodes;
     return Array.from(new Set(data.map(record => record.code).filter(Boolean))).sort();
   };
 
   const getAvailableWorkers = () => {
+    if (availableWorkers.length > 0) return availableWorkers;
     const workerMap = new Map<string, string>();
-    
     data.forEach(record => {
       const worker = record.worker || '';
       if (worker.trim()) {
@@ -222,11 +247,11 @@ export function WorkerIncomeTable({
         }
       }
     });
-    
     return Array.from(workerMap.values()).sort();
   };
 
   const getAvailableMonths = () => {
+    if (availableMonths.length > 0) return availableMonths;
     const months = Array.from(new Set(
       data.map((record) => {
         const date = new Date(record.tanggal);
@@ -244,7 +269,7 @@ export function WorkerIncomeTable({
     });
   };
 
-  const displayData = filteredData.length > 0 ? filteredData : data;
+  const displayData = data;
   const dailyGroups = groupByDay(displayData);
   const monthlyGroups = groupByMonth(displayData);
 
@@ -263,7 +288,7 @@ export function WorkerIncomeTable({
           availableCodes={getAvailableCodes()}
           availableWorkers={getAvailableWorkers()}
           availableMonths={getAvailableMonths()}
-          exportData={filteredData.length > 0 ? filteredData : data}
+          exportData={data}
           tableType="worker_income"
           className="mb-6"
         />
@@ -464,7 +489,7 @@ export function WorkerIncomeTable({
                 }`}
               />
             </PaginationItem>
-           </PaginationContent>
+          </PaginationContent>
           </Pagination>
         </div>
       </div>
