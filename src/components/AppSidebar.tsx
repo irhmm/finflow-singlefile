@@ -162,7 +162,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const visibleWorker = getVisibleWorkerItems();
 
   const menuItemClasses = cn(
-    "relative flex items-center gap-3 w-full px-3 py-2.5 rounded-lg",
+    "relative flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md",
     "text-sidebar-foreground/80 font-medium text-sm",
     "transition-all duration-200 ease-out",
     "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -172,7 +172,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const activeMenuClasses = cn(
     "bg-sidebar-accent text-sidebar-accent-foreground",
     "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2",
-    "before:w-1 before:h-6 before:bg-sidebar-primary before:rounded-r-full"
+    "before:w-0.5 before:h-4 before:bg-sidebar-primary before:rounded-r-full"
   );
 
   const renderMenuItem = (item: typeof workerItems[0]) => {
@@ -214,7 +214,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   };
 
   const CategoryLabel = ({ children }: { children: React.ReactNode }) => (
-    <SidebarGroupLabel className="text-[11px] uppercase tracking-[0.12em] text-sidebar-foreground/50 font-semibold px-3 mb-1">
+    <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] text-sidebar-foreground/50 font-semibold px-2.5 mb-0.5">
       {children}
     </SidebarGroupLabel>
   );
@@ -223,17 +223,17 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarContent className="bg-sidebar-background">
         {/* Elegant Header */}
-        <div className="px-4 py-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center shadow-md">
-              <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+        <div className="px-3 py-3 border-b border-sidebar-border">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-md bg-sidebar-primary flex items-center justify-center shadow-sm">
+              <Building2 className="h-4 w-4 text-sidebar-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-foreground tracking-tight">
+              <span className="text-sm font-semibold text-sidebar-foreground tracking-tight leading-tight">
                 Sistem Keuangan
               </span>
               {user && (
-                <span className="text-[11px] text-sidebar-foreground/50 font-medium">
+                <span className="text-[10px] text-sidebar-foreground/50 font-medium leading-tight">
                   {getRoleDisplayName(userRole)}
                 </span>
               )}
@@ -242,13 +242,13 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
         </div>
 
         {/* Navigation Groups */}
-        <div className="flex-1 py-4 space-y-6">
+        <div className="flex-1 py-2 space-y-3">
           {/* Keuangan */}
           {visibleKeuangan.length > 0 && (
-            <SidebarGroup className="px-2">
+            <SidebarGroup className="px-1.5">
               <CategoryLabel>Keuangan</CategoryLabel>
               <SidebarGroupContent>
-                <SidebarMenu className="space-y-1">
+                <SidebarMenu className="space-y-0.5">
                   {visibleKeuangan.map(renderMenuItem)}
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -257,10 +257,10 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
 
           {/* Admin */}
           {visibleAdmin.length > 0 && (
-            <SidebarGroup className="px-2">
+            <SidebarGroup className="px-1.5">
               <CategoryLabel>Admin</CategoryLabel>
               <SidebarGroupContent>
-                <SidebarMenu className="space-y-1">
+                <SidebarMenu className="space-y-0.5">
                   {visibleAdmin.map(renderMenuItem)}
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -269,10 +269,10 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
 
           {/* Worker */}
           {visibleWorker.length > 0 && (
-            <SidebarGroup className="px-2">
+            <SidebarGroup className="px-1.5">
               <CategoryLabel>Worker</CategoryLabel>
               <SidebarGroupContent>
-                <SidebarMenu className="space-y-1">
+                <SidebarMenu className="space-y-0.5">
                   {visibleWorker.map(renderMenuItem)}
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -282,11 +282,11 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
 
         {/* Logout Section - Fixed at bottom */}
         {user && (
-          <div className="mt-auto border-t border-sidebar-border p-3">
+          <div className="mt-auto border-t border-sidebar-border p-2">
             <button
               onClick={handleSignOut}
               className={cn(
-                "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg",
+                "flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md",
                 "text-sidebar-foreground/70 text-sm font-medium",
                 "transition-all duration-200",
                 "hover:bg-destructive/10 hover:text-destructive"
