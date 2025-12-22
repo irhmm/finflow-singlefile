@@ -118,6 +118,10 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
   const [totalCount, setTotalCount] = useState(0);
+  const [summaryData, setSummaryData] = useState<{ totalCount: number; totalNominal: number }>({
+    totalCount: 0,
+    totalNominal: 0
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null);
@@ -130,28 +134,47 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
   };
 
+  // Helper to get current month date range
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    return {
+      start: `${year}-${month}-01`,
+      end: `${year}-${month}-${lastDay}`
+    };
+  };
+
   // Load data for active table with server-side pagination
   const loadData = async () => {
     setLoading(true);
     try {
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage - 1;
+      const monthRange = getCurrentMonthRange();
 
       // Special handling for workers table to normalize data
       if (activeTable === 'workers') {
-        const { data: result, count, error } = await supabase
-          .from('workers')
-          .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at', { count: 'exact' })
-          .order('id', { ascending: false })
-          .range(startIndex, endIndex);
+        // Parallel queries: paginated data + total count summary
+        const [paginatedResult, summaryResult] = await Promise.all([
+          supabase
+            .from('workers')
+            .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at', { count: 'exact' })
+            .order('id', { ascending: false })
+            .range(startIndex, endIndex),
+          supabase
+            .from('workers')
+            .select('*', { count: 'exact', head: true })
+        ]);
 
-        if (error) {
-          console.error("Supabase error:", error);
-          throw error;
+        if (paginatedResult.error) {
+          console.error("Supabase error:", paginatedResult.error);
+          throw paginatedResult.error;
         }
 
         // Normalize worker data to handle empty strings
-        const normalized = (result || []).map(r => ({
+        const normalized = (paginatedResult.data || []).map(r => ({
           ...r,
           nama: (r.nama || '').trim() || '(Tanpa Nama)',
           rekening: (r.rekening || '').trim() || '-',
@@ -162,37 +185,62 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
         setData(normalized);
         setFilteredData(normalized);
-        setTotalCount(count || 0);
+        setTotalCount(paginatedResult.count || 0);
+        setSummaryData({
+          totalCount: summaryResult.count || 0,
+          totalNominal: 0
+        });
       } else if (activeTable === 'admin_income') {
-        const { data: result, count, error } = await supabase
-          .from('admin_income')
-          .select('*', { count: 'exact' })
-          .order('tanggal', { ascending: false })
-          .range(startIndex, endIndex);
+        // Parallel queries: paginated data + current month summary
+        const [paginatedResult, summaryResult] = await Promise.all([
+          supabase
+            .from('admin_income')
+            .select('*', { count: 'exact' })
+            .order('tanggal', { ascending: false })
+            .range(startIndex, endIndex),
+          supabase
+            .from('admin_income')
+            .select('nominal')
+            .gte('tanggal', monthRange.start)
+            .lte('tanggal', monthRange.end)
+        ]);
 
-        if (error) throw error;
+        if (paginatedResult.error) throw paginatedResult.error;
 
         // Normalize admin_income data
-        const normalized = (result || []).map(r => ({
+        const normalized = (paginatedResult.data || []).map(r => ({
           ...r,
           code: (r.code || '').trim() || null,
           nominal: r.nominal || 0,
         }));
 
+        const totalNominal = (summaryResult.data || []).reduce(
+          (sum, r) => sum + Number(r.nominal || 0), 0
+        );
+
         setData(normalized);
         setFilteredData(normalized);
-        setTotalCount(count || 0);
+        setTotalCount(paginatedResult.count || 0);
+        setSummaryData({ totalCount: 0, totalNominal });
       } else if (activeTable === 'worker_income') {
-        const { data: result, count, error } = await supabase
-          .from('worker_income')
-          .select('*', { count: 'exact' })
-          .order('tanggal', { ascending: false })
-          .range(startIndex, endIndex);
+        // Parallel queries: paginated data + current month summary
+        const [paginatedResult, summaryResult] = await Promise.all([
+          supabase
+            .from('worker_income')
+            .select('*', { count: 'exact' })
+            .order('tanggal', { ascending: false })
+            .range(startIndex, endIndex),
+          supabase
+            .from('worker_income')
+            .select('fee')
+            .gte('tanggal', monthRange.start)
+            .lte('tanggal', monthRange.end)
+        ]);
 
-        if (error) throw error;
+        if (paginatedResult.error) throw paginatedResult.error;
 
         // Normalize worker_income data with case-insensitive worker names
-        const normalized = (result || []).map(r => ({
+        const normalized = (paginatedResult.data || []).map(r => ({
           ...r,
           code: (r.code || '').trim() || 'NO_CODE',
           jobdesk: (r.jobdesk || '').trim() || '(Tanpa jobdesk)',
@@ -200,25 +248,42 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           fee: r.fee || 0,
         }));
 
+        const totalNominal = (summaryResult.data || []).reduce(
+          (sum, r) => sum + Number(r.fee || 0), 0
+        );
+
         setData(normalized);
         setFilteredData(normalized);
-        setTotalCount(count || 0);
+        setTotalCount(paginatedResult.count || 0);
+        setSummaryData({ totalCount: 0, totalNominal });
       } else {
-        // Standard fetch for other tables (expenses)
-        const { data: result, count, error } = await supabase
-          .from(activeTable)
-          .select("*", { count: 'exact' })
-          .order("tanggal", { ascending: false })
-          .range(startIndex, endIndex);
+        // Standard fetch for other tables (expenses) with summary
+        const [paginatedResult, summaryResult] = await Promise.all([
+          supabase
+            .from(activeTable)
+            .select("*", { count: 'exact' })
+            .order("tanggal", { ascending: false })
+            .range(startIndex, endIndex),
+          supabase
+            .from('expenses')
+            .select('nominal')
+            .gte('tanggal', monthRange.start)
+            .lte('tanggal', monthRange.end)
+        ]);
 
-        if (error) {
-          console.error("Supabase error:", error);
-          throw error;
+        if (paginatedResult.error) {
+          console.error("Supabase error:", paginatedResult.error);
+          throw paginatedResult.error;
         }
+
+        const totalNominal = (summaryResult.data || []).reduce(
+          (sum, r) => sum + Number(r.nominal || 0), 0
+        );
         
-        setData(result || []);
-        setFilteredData(result || []);
-        setTotalCount(count || 0);
+        setData(paginatedResult.data || []);
+        setFilteredData(paginatedResult.data || []);
+        setTotalCount(paginatedResult.count || 0);
+        setSummaryData({ totalCount: 0, totalNominal });
       }
     } catch (error: any) {
       console.error("Error loading data:", error);
@@ -423,42 +488,36 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     }
   };
 
-  const calculateTotal = () => {
-    if (activeTable === "workers") {
-      return filteredData.length; // Show count for workers instead of total
-    }
-    
-    // Get data to calculate from - use current month data if no filters applied
-    let dataToCalculate = filteredData;
-    
-    // Check if any filters are applied (excluding search)
-    const hasFilters = filters.selectedCode !== "all" || 
-                      filters.selectedWorker !== "all" || 
-                      filters.selectedMonth !== "all" || 
-                      filters.selectedRole !== "all" || 
-                      filters.selectedStatus !== "all";
-    
-    // If no filters and no search, calculate only current month for tables with date
-    const isDateBasedTable = activeTable === "admin_income" || activeTable === "worker_income" || activeTable === "expenses";
-    if (!hasFilters && !searchQuery.trim() && isDateBasedTable) {
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-      
-      dataToCalculate = data.filter((record) => {
-        const recordDate = new Date((record as any).tanggal);
-        return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
-      });
-    }
-    
-    return dataToCalculate.reduce((total, record) => {
+  // Check if any filters are applied (excluding search)
+  const hasActiveFilters = filters.selectedCode !== "all" || 
+                    filters.selectedWorker !== "all" || 
+                    filters.selectedMonth !== "all" || 
+                    filters.selectedRole !== "all" || 
+                    filters.selectedStatus !== "all" ||
+                    searchQuery.trim() !== "";
+
+  const calculateFilteredTotal = () => {
+    // Calculate from filtered data only when filters are active
+    return filteredData.reduce((total, record) => {
       if (activeTable === "worker_income") {
         const fee = (record as WorkerIncome).fee;
         return total + (fee && !isNaN(fee) ? fee : 0);
       }
+      if (activeTable === "workers") {
+        return total + 1; // Count workers
+      }
       const nominal = (record as AdminIncome | Expense).nominal;
       return total + (nominal && !isNaN(nominal) ? nominal : 0);
     }, 0);
+  };
+
+  const getSummaryDisplay = () => {
+    if (activeTable === "workers") {
+      // For workers: show total count from database
+      return `${summaryData.totalCount} Worker`;
+    }
+    // For income/expenses: show total nominal from current month
+    return `Rp ${summaryData.totalNominal.toLocaleString("id-ID")}`;
   };
 
   return (
@@ -526,21 +585,23 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
-                  {activeTable === "workers" ? "Total" : "Total"} {tableLabels[activeTable]} {
-                    (searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all") || (filters.selectedRole !== "all") || (filters.selectedStatus !== "all")) 
+                  Total {tableLabels[activeTable]} {
+                    hasActiveFilters 
                       ? "(Hasil Filter)" 
                       : activeTable !== "workers" ? "(Bulan Ini)" : ""
                   }
                 </h3>
                 <p className="text-4xl font-bold text-header">
-                  {activeTable === "workers" 
-                    ? `${calculateTotal()} Worker`
-                    : `Rp ${calculateTotal().toLocaleString("id-ID")}`
+                  {hasActiveFilters 
+                    ? (activeTable === "workers" 
+                        ? `${filteredData.length} Worker`
+                        : `Rp ${calculateFilteredTotal().toLocaleString("id-ID")}`)
+                    : getSummaryDisplay()
                   }
                 </p>
-                {(searchQuery || (filters.selectedCode !== "all") || (filters.selectedWorker !== "all") || (filters.selectedMonth !== "all")) && (
+                {hasActiveFilters && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    dari {data.length} total data
+                    dari {getSummaryDisplay()} total {activeTable === "workers" ? "" : "bulan ini"}
                   </p>
                 )}
               </Card>
