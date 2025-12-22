@@ -117,6 +117,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
+  const [totalCount, setTotalCount] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DataRecord | null>(null);
@@ -129,16 +130,20 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
   };
 
-  // Load data for active table
+  // Load data for active table with server-side pagination
   const loadData = async () => {
     setLoading(true);
     try {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage - 1;
+
       // Special handling for workers table to normalize data
       if (activeTable === 'workers') {
-        const { data: result, error } = await supabase
+        const { data: result, count, error } = await supabase
           .from('workers')
-          .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at')
-          .order('id', { ascending: false });
+          .select('id, nama, rekening, nomor_wa, role, status, created_at, updated_at', { count: 'exact' })
+          .order('id', { ascending: false })
+          .range(startIndex, endIndex);
 
         if (error) {
           console.error("Supabase error:", error);
@@ -157,11 +162,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
         setData(normalized);
         setFilteredData(normalized);
+        setTotalCount(count || 0);
       } else if (activeTable === 'admin_income') {
-        const { data: result, error } = await supabase
+        const { data: result, count, error } = await supabase
           .from('admin_income')
-          .select('*')
-          .order('tanggal', { ascending: false });
+          .select('*', { count: 'exact' })
+          .order('tanggal', { ascending: false })
+          .range(startIndex, endIndex);
 
         if (error) throw error;
 
@@ -174,11 +181,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
         setData(normalized);
         setFilteredData(normalized);
+        setTotalCount(count || 0);
       } else if (activeTable === 'worker_income') {
-        const { data: result, error } = await supabase
+        const { data: result, count, error } = await supabase
           .from('worker_income')
-          .select('*')
-          .order('tanggal', { ascending: false });
+          .select('*', { count: 'exact' })
+          .order('tanggal', { ascending: false })
+          .range(startIndex, endIndex);
 
         if (error) throw error;
 
@@ -193,12 +202,14 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
 
         setData(normalized);
         setFilteredData(normalized);
+        setTotalCount(count || 0);
       } else {
-        // Standard fetch for other tables
-        const { data: result, error } = await supabase
+        // Standard fetch for other tables (expenses)
+        const { data: result, count, error } = await supabase
           .from(activeTable)
-          .select("*")
-          .order("tanggal", { ascending: false });
+          .select("*", { count: 'exact' })
+          .order("tanggal", { ascending: false })
+          .range(startIndex, endIndex);
 
         if (error) {
           console.error("Supabase error:", error);
@@ -207,6 +218,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         
         setData(result || []);
         setFilteredData(result || []);
+        setTotalCount(count || 0);
       }
     } catch (error: any) {
       console.error("Error loading data:", error);
@@ -258,7 +270,7 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeTable]);
+  }, [activeTable, currentPage]);
 
   // Advanced filtering functionality
   useEffect(() => {
@@ -356,12 +368,13 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
     setCurrentPage(1);
   }, [searchQuery, filters]);
 
-  // Calculate pagination data
-  const totalItems = filteredData.length;
+  // Calculate pagination data - use server-side count
+  const totalItems = totalCount;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredData.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  // Data is already paginated from server, no need to slice
+  const currentData = filteredData;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

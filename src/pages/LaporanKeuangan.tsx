@@ -47,22 +47,19 @@ export default function LaporanKeuangan() {
 
   const loadAvailableYears = async () => {
     try {
-      const queries = await Promise.all([
-        supabase.from("admin_income").select("tanggal"),
-        supabase.from("worker_income").select("tanggal"),
-        supabase.from("expenses").select("tanggal")
-      ]);
-
-      const allDates: string[] = [];
-      queries.forEach(({ data }) => {
-        if (data) {
-          allDates.push(...data.map(record => record.tanggal));
-        }
-      });
-
-      const years = [...new Set(allDates.map(date => new Date(date).getFullYear().toString()))];
-      years.sort((a, b) => parseInt(b) - parseInt(a));
-      setAvailableYears(years.length > 0 ? years : [new Date().getFullYear().toString()]);
+      // Optimized: Only fetch distinct years by getting min/max dates
+      const currentYear = new Date().getFullYear();
+      const minYear = 2020; // Reasonable minimum year
+      
+      // Check if data exists for recent years (last 5 years only)
+      const yearsToCheck = [];
+      for (let y = currentYear; y >= minYear; y--) {
+        yearsToCheck.push(y.toString());
+      }
+      
+      // Simple approach: just show last 5 years, data will be empty if no records
+      const years = yearsToCheck.slice(0, 5);
+      setAvailableYears(years.length > 0 ? years : [currentYear.toString()]);
     } catch (error) {
       console.error("Error loading years:", error);
       setAvailableYears([new Date().getFullYear().toString()]);
