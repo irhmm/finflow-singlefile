@@ -85,7 +85,7 @@ const workerItems = [
     table: "rekap_gaji" as any,
     path: "/rekap-gaji-worker",
     isRoute: true,
-    publicAccess: true,
+    publicAccess: false,
   },
   {
     title: "Worker Done",
