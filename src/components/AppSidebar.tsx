@@ -1,4 +1,4 @@
-import { CreditCard, Users, TrendingDown, BarChart3, LogOut, UserCheck, Wallet, CheckCircle2, Briefcase, ShieldCheck } from "lucide-react";
+import { CreditCard, Users, TrendingDown, BarChart3, LogOut, UserCheck, Wallet, CheckCircle2, Briefcase, ShieldCheck, Building2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { TableType } from "./FinancialDashboard";
+import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
   activeTable: TableType | "laporan" | "rekap_gaji" | "worker_done" | "gaji_admin" | "admins";
@@ -95,6 +96,16 @@ const workerItems = [
   },
 ];
 
+const getRoleDisplayName = (role: string) => {
+  switch (role) {
+    case 'super_admin': return 'Super Admin';
+    case 'admin': return 'Admin';
+    case 'admin_keuangan': return 'Admin Keuangan';
+    case 'public': return 'Public';
+    default: return 'User';
+  }
+};
+
 export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
@@ -150,114 +161,141 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
   const visibleAdmin = getVisibleAdminItems();
   const visibleWorker = getVisibleWorkerItems();
 
-  const renderMenuItem = (item: typeof workerItems[0]) => (
-    <SidebarMenuItem key={item.table}>
-      <SidebarMenuButton
-        asChild
-        isActive={activeTable === item.table}
-        className="hover:bg-secondary/10 hover:text-secondary data-[active=true]:bg-secondary data-[active=true]:text-white"
-      >
-        {item.isRoute ? (
-          <NavLink
-            to={item.path || '/'}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="font-medium">{item.title}</span>
-          </NavLink>
-        ) : (
-          <button
-            onClick={() => {
-              onTableChange(item.table);
-              navigate(`/?tab=${item.table}`);
-            }}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-md transition-colors"
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="font-medium">{item.title}</span>
-          </button>
-        )}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+  const menuItemClasses = cn(
+    "relative flex items-center gap-3 w-full px-3 py-2.5 rounded-lg",
+    "text-sidebar-foreground/80 font-medium text-sm",
+    "transition-all duration-200 ease-out",
+    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    "group"
+  );
+
+  const activeMenuClasses = cn(
+    "bg-sidebar-accent text-sidebar-accent-foreground",
+    "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2",
+    "before:w-1 before:h-6 before:bg-sidebar-primary before:rounded-r-full"
+  );
+
+  const renderMenuItem = (item: typeof workerItems[0]) => {
+    const isActive = activeTable === item.table;
+    
+    return (
+      <SidebarMenuItem key={item.table}>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive}
+          className={cn(
+            "p-0 h-auto font-normal",
+            "hover:bg-transparent data-[active=true]:bg-transparent"
+          )}
+        >
+          {item.isRoute ? (
+            <NavLink
+              to={item.path || '/'}
+              className={cn(menuItemClasses, isActive && activeMenuClasses)}
+            >
+              <item.icon className="h-4 w-4 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+              <span>{item.title}</span>
+            </NavLink>
+          ) : (
+            <button
+              onClick={() => {
+                onTableChange(item.table);
+                navigate(`/?tab=${item.table}`);
+              }}
+              className={cn(menuItemClasses, isActive && activeMenuClasses)}
+            >
+              <item.icon className="h-4 w-4 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+              <span>{item.title}</span>
+            </button>
+          )}
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
+  const CategoryLabel = ({ children }: { children: React.ReactNode }) => (
+    <SidebarGroupLabel className="text-[11px] uppercase tracking-[0.12em] text-sidebar-foreground/50 font-semibold px-3 mb-1">
+      {children}
+    </SidebarGroupLabel>
   );
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-secondary/20">
-      <SidebarContent className="bg-gradient-to-b from-card to-secondary/5">
-        {/* Header with role badge */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-header font-semibold flex items-center justify-between">
-            Sistem Keuangan
-            {user && (
-              <span className="text-xs px-2 py-1 bg-blue-500 text-white rounded-full">
-                {userRole === 'super_admin' ? 'Super Admin' : 
-                 userRole === 'admin' ? 'Admin' : 
-                 userRole === 'admin_keuangan' ? 'Admin Keuangan' : 
-                 userRole === 'public' ? 'Public' : 'User'}
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarContent className="bg-sidebar-background">
+        {/* Elegant Header */}
+        <div className="px-4 py-6 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center shadow-md">
+              <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-sidebar-foreground tracking-tight">
+                Sistem Keuangan
               </span>
-            )}
-          </SidebarGroupLabel>
-        </SidebarGroup>
+              {user && (
+                <span className="text-[11px] text-sidebar-foreground/50 font-medium">
+                  {getRoleDisplayName(userRole)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
 
-        {/* Keuangan - PALING ATAS */}
-        {visibleKeuangan.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              📊 Keuangan
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {visibleKeuangan.map(renderMenuItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {/* Navigation Groups */}
+        <div className="flex-1 py-4 space-y-6">
+          {/* Keuangan */}
+          {visibleKeuangan.length > 0 && (
+            <SidebarGroup className="px-2">
+              <CategoryLabel>Keuangan</CategoryLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {visibleKeuangan.map(renderMenuItem)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
-        {/* Admin */}
-        {visibleAdmin.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              🏢 Admin
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {visibleAdmin.map(renderMenuItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+          {/* Admin */}
+          {visibleAdmin.length > 0 && (
+            <SidebarGroup className="px-2">
+              <CategoryLabel>Admin</CategoryLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {visibleAdmin.map(renderMenuItem)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
-        {/* Worker */}
-        {visibleWorker.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              👥 Worker
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {visibleWorker.map(renderMenuItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+          {/* Worker */}
+          {visibleWorker.length > 0 && (
+            <SidebarGroup className="px-2">
+              <CategoryLabel>Worker</CategoryLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {visibleWorker.map(renderMenuItem)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+        </div>
 
-        {/* Akun - Logout */}
+        {/* Logout Section - Fixed at bottom */}
         {user && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              👤 Akun
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={handleSignOut} className="hover:bg-destructive/10 hover:text-destructive">
-                    <LogOut className="h-5 w-5" />
-                    <span className="font-medium">Logout</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <div className="mt-auto border-t border-sidebar-border p-3">
+            <button
+              onClick={handleSignOut}
+              className={cn(
+                "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg",
+                "text-sidebar-foreground/70 text-sm font-medium",
+                "transition-all duration-200",
+                "hover:bg-destructive/10 hover:text-destructive"
+              )}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
+          </div>
         )}
       </SidebarContent>
     </Sidebar>
