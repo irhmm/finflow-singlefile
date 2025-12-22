@@ -53,11 +53,11 @@ serve(async (req) => {
     const webhookData = await req.json()
     console.log('Received webhook data:', webhookData)
 
-    // Helper function to check if code is admin format (A1, A2, etc. without dash)
+    // Helper function to check if code is admin format (A1, A2, etc. - letter + single digit only)
     const isAdminCode = (code: string): boolean => {
       if (!code) return false
-      // Admin codes are like A1, A2, A3, A4 (letter + number, no dash)
-      return /^[A-Za-z]\d+$/.test(code.trim())
+      // Admin codes are ONLY A1, A2, A3, A4 etc (letter + single digit 1-9, no dash)
+      return /^[A-Za-z][1-9]$/.test(code.trim())
     }
 
     // Helper function to check if code is worker format (A1-1234, etc. with dash)
@@ -81,8 +81,8 @@ serve(async (req) => {
         worker: webhookData.worker,
         fee: parseFloat(webhookData.fee)
       }
-    } else if (webhookData.nominal && (webhookData.type === 'admin' || isAdminCode(webhookData.code))) {
-      // Admin income data - explicit type or admin code format
+    } else if (webhookData.nominal && parseFloat(webhookData.nominal) > 0 && (webhookData.type === 'admin' || isAdminCode(webhookData.code))) {
+      // Admin income data - explicit type or admin code format, nominal must be > 0
       tableName = 'admin_income'
       insertData = {
         tanggal: webhookData.tanggal || new Date().toISOString().split('T')[0],
