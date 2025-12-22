@@ -57,6 +57,13 @@ export default function RekapGajiWorker() {
   const [monthComboboxOpen, setMonthComboboxOpen] = useState(false);
   const canWrite = ['admin', 'admin_keuangan', 'super_admin'].includes(userRole);
 
+  // Pagination state
+  const [incomePage, setIncomePage] = useState(1);
+  const [withdrawalPage, setWithdrawalPage] = useState(1);
+  const [incomeTotalCount, setIncomeTotalCount] = useState(0);
+  const [withdrawalTotalCount, setWithdrawalTotalCount] = useState(0);
+  const itemsPerPage = 10;
+
   // Form state
   const [formData, setFormData] = useState({
     worker: "",
@@ -85,9 +92,18 @@ export default function RekapGajiWorker() {
 
   useEffect(() => {
     if (selectedWorker || selectedMonth) {
+      setIncomePage(1);
+      setWithdrawalPage(1);
       fetchData();
     }
   }, [selectedWorker, selectedMonth]);
+
+  // Refetch when pagination changes
+  useEffect(() => {
+    if (selectedWorker || selectedMonth) {
+      fetchData();
+    }
+  }, [incomePage, withdrawalPage]);
 
   const fetchWorkers = async () => {
     try {
@@ -143,59 +159,77 @@ export default function RekapGajiWorker() {
       setWorkerIncomes([]);
       setSalaryWithdrawals([]);
       setSummary({ totalIncome: 0, totalWithdrawals: 0, remainingBalance: 0 });
+      setIncomeTotalCount(0);
+      setWithdrawalTotalCount(0);
       return;
     }
 
     setIsLoading(true);
     try {
-      let incomeQuery = supabase.from("worker_income").select("*");
-      let withdrawalQuery = supabase.from("salary_withdrawals").select("*");
+      const startDate = selectedMonth ? `${selectedMonth}-01` : undefined;
+      const endDate = selectedMonth 
+        ? format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd") 
+        : undefined;
+      
+      const incomeStart = (incomePage - 1) * itemsPerPage;
+      const withdrawalStart = (withdrawalPage - 1) * itemsPerPage;
 
-      if (selectedMonth) {
-        const startDate = `${selectedMonth}-01`;
-        const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
+      // Build queries with server-side pagination
+      let incomeQuery = supabase.from("worker_income").select("*", { count: 'exact' });
+      let withdrawalQuery = supabase.from("salary_withdrawals").select("*", { count: 'exact' });
+      
+      // Separate queries for summary (need all data for totals)
+      let incomeSummaryQuery = supabase.from("worker_income").select("fee, worker");
+      let withdrawalSummaryQuery = supabase.from("salary_withdrawals").select("amount, worker");
+
+      if (startDate && endDate) {
         incomeQuery = incomeQuery.gte("tanggal", startDate).lte("tanggal", endDate);
         withdrawalQuery = withdrawalQuery.gte("tanggal", startDate).lte("tanggal", endDate);
+        incomeSummaryQuery = incomeSummaryQuery.gte("tanggal", startDate).lte("tanggal", endDate);
+        withdrawalSummaryQuery = withdrawalSummaryQuery.gte("tanggal", startDate).lte("tanggal", endDate);
       }
-
-      const { data: incomeData, error: incomeError } = await incomeQuery.order("tanggal", { ascending: false });
-      if (incomeError) throw new Error(`Gagal mengambil data pendapatan: ${incomeError.message}`);
-
-      const { data: withdrawalData, error: withdrawalError } = await withdrawalQuery.order("tanggal", { ascending: false });
-      if (withdrawalError) throw new Error(`Gagal mengambil data pengambilan gaji: ${withdrawalError.message}`);
-
-      const normalizedIncome = (incomeData || []).map(item => ({
-        ...item,
-        worker: normalizeWorkerName(item.worker)
-      }));
-
-      const normalizedWithdrawals = (withdrawalData || []).map(item => ({
-        ...item,
-        worker: normalizeWorkerName(item.worker)
-      }));
-
-      let filteredIncome = normalizedIncome;
-      let filteredWithdrawals = normalizedWithdrawals;
 
       if (selectedWorker) {
-        const normalizedSelectedWorker = normalizeWorkerName(selectedWorker);
-        filteredIncome = normalizedIncome.filter(item => 
-          normalizeWorkerName(item.worker) === normalizedSelectedWorker
-        );
-        filteredWithdrawals = normalizedWithdrawals.filter(item => 
-          normalizeWorkerName(item.worker) === normalizedSelectedWorker
-        );
+        const normalizedWorker = normalizeWorkerName(selectedWorker);
+        incomeQuery = incomeQuery.ilike("worker", normalizedWorker);
+        withdrawalQuery = withdrawalQuery.ilike("worker", normalizedWorker);
+        incomeSummaryQuery = incomeSummaryQuery.ilike("worker", normalizedWorker);
+        withdrawalSummaryQuery = withdrawalSummaryQuery.ilike("worker", normalizedWorker);
       }
 
-      setWorkerIncomes(filteredIncome);
-      setSalaryWithdrawals(filteredWithdrawals);
+      // Fetch paginated data and summary in parallel
+      const [incomeRes, withdrawalRes, incomeSummaryRes, withdrawalSummaryRes] = await Promise.all([
+        incomeQuery.order("tanggal", { ascending: false }).range(incomeStart, incomeStart + itemsPerPage - 1),
+        withdrawalQuery.order("tanggal", { ascending: false }).range(withdrawalStart, withdrawalStart + itemsPerPage - 1),
+        incomeSummaryQuery,
+        withdrawalSummaryQuery
+      ]);
 
-      const totalIncome = filteredIncome.reduce((sum, item) => {
+      if (incomeRes.error) throw new Error(`Gagal mengambil data pendapatan: ${incomeRes.error.message}`);
+      if (withdrawalRes.error) throw new Error(`Gagal mengambil data pengambilan gaji: ${withdrawalRes.error.message}`);
+
+      const normalizedIncome = (incomeRes.data || []).map(item => ({
+        ...item,
+        worker: normalizeWorkerName(item.worker)
+      }));
+
+      const normalizedWithdrawals = (withdrawalRes.data || []).map(item => ({
+        ...item,
+        worker: normalizeWorkerName(item.worker)
+      }));
+
+      setWorkerIncomes(normalizedIncome);
+      setSalaryWithdrawals(normalizedWithdrawals);
+      setIncomeTotalCount(incomeRes.count || 0);
+      setWithdrawalTotalCount(withdrawalRes.count || 0);
+
+      // Calculate totals from summary queries
+      const totalIncome = (incomeSummaryRes.data || []).reduce((sum, item) => {
         const fee = Number(item.fee);
         return sum + (isNaN(fee) ? 0 : fee);
       }, 0);
       
-      const totalWithdrawals = filteredWithdrawals.reduce((sum, item) => {
+      const totalWithdrawals = (withdrawalSummaryRes.data || []).reduce((sum, item) => {
         const amount = Number(item.amount);
         return sum + (isNaN(amount) ? 0 : amount);
       }, 0);
@@ -622,8 +656,11 @@ export default function RekapGajiWorker() {
               {/* Rincian Pendapatan */}
               <Card className="shadow-lg border-0">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">
-                    Rincian Pendapatan {selectedWorker && `(${selectedWorker})`}
+                  <CardTitle className="text-base font-semibold flex items-center justify-between">
+                    <span>Rincian Pendapatan {selectedWorker && `(${selectedWorker})`}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {incomeTotalCount} data
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -647,7 +684,7 @@ export default function RekapGajiWorker() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {workerIncomes.slice(0, 10).map((income) => (
+                          {workerIncomes.map((income) => (
                             <TableRow key={income.id}>
                               <TableCell className="text-sm">{formatDate(income.tanggal)}</TableCell>
                               <TableCell>
@@ -663,9 +700,30 @@ export default function RekapGajiWorker() {
                           ))}
                         </TableBody>
                       </Table>
-                      {workerIncomes.length > 10 && (
-                        <div className="p-3 text-center text-sm text-muted-foreground border-t">
-                          +{workerIncomes.length - 10} data lainnya
+                      {/* Pagination for income */}
+                      {incomeTotalCount > itemsPerPage && (
+                        <div className="p-3 border-t flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Halaman {incomePage} dari {Math.ceil(incomeTotalCount / itemsPerPage)}
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setIncomePage(p => Math.max(1, p - 1))}
+                              disabled={incomePage <= 1 || isLoading}
+                            >
+                              Prev
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setIncomePage(p => p + 1)}
+                              disabled={incomePage >= Math.ceil(incomeTotalCount / itemsPerPage) || isLoading}
+                            >
+                              Next
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -676,8 +734,11 @@ export default function RekapGajiWorker() {
               {/* Rincian Pengambilan Gaji */}
               <Card className="shadow-lg border-0">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">
-                    Rincian Pengambilan Gaji
+                  <CardTitle className="text-base font-semibold flex items-center justify-between">
+                    <span>Rincian Pengambilan Gaji</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {withdrawalTotalCount} data
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -700,7 +761,7 @@ export default function RekapGajiWorker() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {salaryWithdrawals.slice(0, 10).map((withdrawal) => (
+                          {salaryWithdrawals.map((withdrawal) => (
                             <TableRow key={withdrawal.id}>
                               <TableCell className="text-sm">{formatDate(withdrawal.tanggal)}</TableCell>
                               <TableCell className="text-right font-medium">
@@ -711,9 +772,30 @@ export default function RekapGajiWorker() {
                           ))}
                         </TableBody>
                       </Table>
-                      {salaryWithdrawals.length > 10 && (
-                        <div className="p-3 text-center text-sm text-muted-foreground border-t">
-                          +{salaryWithdrawals.length - 10} data lainnya
+                      {/* Pagination for withdrawals */}
+                      {withdrawalTotalCount > itemsPerPage && (
+                        <div className="p-3 border-t flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Halaman {withdrawalPage} dari {Math.ceil(withdrawalTotalCount / itemsPerPage)}
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setWithdrawalPage(p => Math.max(1, p - 1))}
+                              disabled={withdrawalPage <= 1 || isLoading}
+                            >
+                              Prev
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setWithdrawalPage(p => p + 1)}
+                              disabled={withdrawalPage >= Math.ceil(withdrawalTotalCount / itemsPerPage) || isLoading}
+                            >
+                              Next
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
