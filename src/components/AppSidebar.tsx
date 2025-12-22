@@ -23,17 +23,17 @@ interface AppSidebarProps {
 // Keuangan Items
 const keuanganItems = [
   {
-    title: "Pengeluaran",
-    icon: TrendingDown,
-    table: "expenses" as TableType,
-    isRoute: false,
-  },
-  {
     title: "Laporan Keuangan",
     icon: BarChart3,
     table: "laporan" as any,
     path: "/laporan-keuangan",
     isRoute: true,
+  },
+  {
+    title: "Pengeluaran",
+    icon: TrendingDown,
+    table: "expenses" as TableType,
+    isRoute: false,
   },
 ];
 
