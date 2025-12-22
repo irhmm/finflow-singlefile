@@ -78,9 +78,33 @@ export function DataModal({ isOpen, onClose, tableType, editingRecord }: DataMod
       
       // Convert string numbers to actual numbers and normalize data
       if (tableType === "admin_income") {
-        submitData.nominal = parseFloat(submitData.nominal);
-        // Normalize code: trim and convert empty to null
-        submitData.code = (submitData.code || '').trim() || null;
+        const nominal = parseFloat(submitData.nominal);
+        
+        // Validate nominal
+        if (isNaN(nominal) || nominal <= 0) {
+          toast({
+            title: "Error",
+            description: "Nominal harus berupa angka yang lebih besar dari 0",
+            variant: "destructive"
+          });
+          setSaving(false);
+          return;
+        }
+        
+        // Validate code format (should be admin code like A1, A2, not worker code like A1-1234)
+        const code = (submitData.code || '').trim();
+        if (code && /^[A-Za-z]\d+-\d+$/.test(code)) {
+          toast({
+            title: "Error",
+            description: "Format code tidak valid untuk Admin. Gunakan format seperti A1, A2, A3 (tanpa dash)",
+            variant: "destructive"
+          });
+          setSaving(false);
+          return;
+        }
+        
+        submitData.nominal = nominal;
+        submitData.code = code || null;
       } else if (tableType === "worker_income") {
         submitData.fee = parseFloat(submitData.fee);
         // Normalize worker name: proper case

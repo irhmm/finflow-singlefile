@@ -53,12 +53,26 @@ serve(async (req) => {
     const webhookData = await req.json()
     console.log('Received webhook data:', webhookData)
 
+    // Helper function to check if code is admin format (A1, A2, etc. without dash)
+    const isAdminCode = (code: string): boolean => {
+      if (!code) return false
+      // Admin codes are like A1, A2, A3, A4 (letter + number, no dash)
+      return /^[A-Za-z]\d+$/.test(code.trim())
+    }
+
+    // Helper function to check if code is worker format (A1-1234, etc. with dash)
+    const isWorkerCode = (code: string): boolean => {
+      if (!code) return false
+      // Worker codes are like A1-1234, A2-5678 (with dash and numbers after)
+      return /^[A-Za-z]\d+-\d+$/.test(code.trim())
+    }
+
     // Determine which table to insert into based on the data structure
     let tableName: string
     let insertData: any
 
     if (webhookData.code && webhookData.jobdesk && webhookData.worker && webhookData.fee) {
-      // Worker income data
+      // Worker income data (has all worker-specific fields)
       tableName = 'worker_income'
       insertData = {
         tanggal: webhookData.tanggal || new Date().toISOString().split('T')[0],
@@ -67,11 +81,12 @@ serve(async (req) => {
         worker: webhookData.worker,
         fee: parseFloat(webhookData.fee)
       }
-    } else if (webhookData.nominal && webhookData.type === 'admin') {
-      // Admin income data
+    } else if (webhookData.nominal && (webhookData.type === 'admin' || isAdminCode(webhookData.code))) {
+      // Admin income data - explicit type or admin code format
       tableName = 'admin_income'
       insertData = {
         tanggal: webhookData.tanggal || new Date().toISOString().split('T')[0],
+        code: webhookData.code || null,
         nominal: parseFloat(webhookData.nominal)
       }
     } else if (webhookData.nominal && (webhookData.type === 'expense' || !webhookData.type)) {
@@ -82,8 +97,17 @@ serve(async (req) => {
         nominal: parseFloat(webhookData.nominal)
       }
     } else {
-      // Try to auto-detect based on webhook table parameter
+      // Try to auto-detect based on webhook table parameter or code format
       tableName = webhookData.table || 'expenses'
+      
+      // Auto-detect table based on code format if table not specified
+      if (!webhookData.table && webhookData.code) {
+        if (isWorkerCode(webhookData.code)) {
+          tableName = 'worker_income'
+        } else if (isAdminCode(webhookData.code)) {
+          tableName = 'admin_income'
+        }
+      }
       
       if (tableName === 'worker_income') {
         insertData = {
@@ -96,6 +120,7 @@ serve(async (req) => {
       } else if (tableName === 'admin_income') {
         insertData = {
           tanggal: webhookData.tanggal || new Date().toISOString().split('T')[0],
+          code: webhookData.code || null,
           nominal: parseFloat(webhookData.nominal || 0)
         }
       } else {
