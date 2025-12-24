@@ -416,6 +416,84 @@ export function WorkerIncomeTable({
       </TabsContent>
     </Tabs>
 
+    {/* Pagination */}
+    {totalItems > itemsPerPage && onPageChange && (
+      <div className="flex items-center bg-background border border-border/50 rounded-lg px-6 py-4 shadow-sm">
+        <div className="text-sm text-muted-foreground">
+          Menampilkan {startIndex + 1} - {endIndex} dari {totalItems} data
+        </div>
+        
+        <div className="ml-auto">
+          <Pagination>
+            <PaginationContent className="gap-1">
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) onPageChange(currentPage - 1);
+                  }}
+                  className={`border border-border/50 hover:bg-muted/50 ${
+                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                  }`}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
+                .filter(page => {
+                  const totalPages = Math.ceil(totalItems / itemsPerPage);
+                  if (totalPages <= 7) return true;
+                  if (page === 1 || page === totalPages) return true;
+                  if (page >= currentPage - 2 && page <= currentPage + 2) return true;
+                  return false;
+                })
+                .map((page, index, array) => {
+                  const prevPage = array[index - 1];
+                  const showEllipsis = prevPage && page - prevPage > 1;
+                  
+                  return (
+                    <PaginationItem key={page}>
+                      {showEllipsis && (
+                        <span className="px-3 py-2 text-muted-foreground text-sm">...</span>
+                      )}
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onPageChange(page);
+                        }}
+                        isActive={currentPage === page}
+                        className={`border border-border/50 min-w-[40px] h-10 rounded-md transition-all duration-200 ${
+                          currentPage === page 
+                            ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90" 
+                            : "hover:bg-muted/50"
+                        }`}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < Math.ceil(totalItems / itemsPerPage)) {
+                      onPageChange(currentPage + 1);
+                    }
+                  }}
+                  className={`border border-border/50 hover:bg-muted/50 ${
+                    currentPage >= Math.ceil(totalItems / itemsPerPage) ? "pointer-events-none opacity-50" : ""
+                  }`}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
