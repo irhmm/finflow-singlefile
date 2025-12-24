@@ -399,8 +399,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
           query = query.or(`code.ilike.%${searchQuery}%,worker.ilike.%${searchQuery}%,jobdesk.ilike.%${searchQuery}%`);
         }
 
-        // No pagination for worker_income - fetch all data
-        query = query.order('tanggal', { ascending: false });
+        // Apply pagination
+        query = query.order('tanggal', { ascending: false }).range(startIndex, endIndex);
 
         // Also calculate filtered total for summary
         let summaryQuery = supabase
