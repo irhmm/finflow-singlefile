@@ -88,8 +88,8 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
       return;
     }
     
-    if (userRole === 'admin' && tab && !['worker_income'].includes(tab)) {
-      // Admin: only worker_income (admin_income requires admin_keuangan or super_admin)
+    if (userRole === 'admin' && tab && !['worker_income', 'admin_income'].includes(tab)) {
+      // Admin: worker_income and admin_income (read-only)
       window.history.replaceState({}, '', '/?tab=worker_income');
       setActiveTable('worker_income');
       return;
@@ -690,8 +690,12 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               )}
             </div>
 
-            {/* Show total for worker_income in public mode only when both month and worker filters are selected */}
-            {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && (
+            {/* Hide total card for:
+                - worker_income in public mode unless both month and worker filters are selected
+                - admin_income when user role is 'admin' (read-only mode)
+            */}
+            {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && 
+             !(activeTable === "admin_income" && userRole === 'admin') && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
                   Total {tableLabels[activeTable]} {
