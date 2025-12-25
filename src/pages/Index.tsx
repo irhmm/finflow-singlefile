@@ -9,7 +9,7 @@ const Index = () => {
     // Get table from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get("tab") as TableType;
-    if (tab && ["admin_income", "worker_income", "expenses", "workers"].includes(tab)) {
+    if (tab && ["admin_income", "expenses", "workers"].includes(tab)) {
       setActiveTable(tab);
     }
   }, []);
