@@ -145,7 +145,7 @@ export function AppSidebar({ activeTable, onTableChange }: AppSidebarProps) {
     }
     if (userRole === 'admin') {
       return workerItems.filter(item => 
-        item.table === 'worker_income' || item.table === 'rekap_gaji'
+        item.table === 'worker_income'
       );
     }
     if (userRole === 'admin_keuangan') {

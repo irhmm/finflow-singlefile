@@ -693,9 +693,11 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
             {/* Hide total card for:
                 - worker_income in public mode unless both month and worker filters are selected
                 - admin_income when user role is 'admin' (read-only mode)
+                - worker_income when user role is 'admin'
             */}
             {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && 
-             !(activeTable === "admin_income" && userRole === 'admin') && (
+             !(activeTable === "admin_income" && userRole === 'admin') && 
+             !(activeTable === "worker_income" && userRole === 'admin') && (
               <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
                 <h3 className="text-2xl font-bold mb-3 text-header">
                   Total {tableLabels[activeTable]} {
