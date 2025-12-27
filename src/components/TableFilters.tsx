@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,22 @@ export function TableFilters({
   className = ""
 }: TableFiltersProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  // Debounce: update parent after 500ms of no typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== searchQuery) {
+        onSearchChange(localSearch);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+
+  // Sync from parent when filters are cleared
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   const activeFiltersCount = [
     tableType === "admin_income" && filters.selectedCode !== "all" ? filters.selectedCode : "",
@@ -127,8 +143,8 @@ export function TableFilters({
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={tableType === "admin_income" ? "Cari berdasarkan code..." : tableType === "worker_income" ? "Cari berdasarkan code, jobdesk, atau worker..." : "Cari berdasarkan nama, role, atau status..."}
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
           className="pl-10 pr-4 h-11 border-border/50 focus:border-[#3b82f6] focus:ring-[#3b82f6] transition-all duration-200"
         />
       </div>
