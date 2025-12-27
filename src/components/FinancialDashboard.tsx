@@ -351,13 +351,32 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         // Apply pagination
         query = query.order('tanggal', { ascending: false }).range(startIndex, endIndex);
 
+        // Also calculate filtered total for summary
+        let summaryQuery = supabase
+          .from('admin_income')
+          .select('nominal');
+
+        // Apply same filters to summary query
+        if (filters.selectedCode && filters.selectedCode !== 'all') {
+          summaryQuery = summaryQuery.eq('code', filters.selectedCode);
+        }
+        if (filters.selectedMonth && filters.selectedMonth !== 'all') {
+          const [year, month] = filters.selectedMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+          summaryQuery = summaryQuery.gte('tanggal', startDate).lte('tanggal', endDate);
+        } else {
+          // If no month filter, use current month for summary
+          summaryQuery = summaryQuery.gte('tanggal', monthRange.start).lte('tanggal', monthRange.end);
+        }
+        if (searchQuery.trim()) {
+          summaryQuery = summaryQuery.or(`code.ilike.%${searchQuery}%`);
+        }
+
         const [paginatedResult, summaryResult] = await Promise.all([
           query,
-          supabase
-            .from('admin_income')
-            .select('nominal')
-            .gte('tanggal', monthRange.start)
-            .lte('tanggal', monthRange.end)
+          summaryQuery
         ]);
 
         if (paginatedResult.error) throw paginatedResult.error;
