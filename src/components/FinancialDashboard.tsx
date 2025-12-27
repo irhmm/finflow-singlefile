@@ -491,13 +491,29 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
         // Apply pagination
         query = query.order('tanggal', { ascending: false }).range(startIndex, endIndex);
 
+        // Also calculate filtered total for summary
+        let summaryQuery = supabase
+          .from('expenses')
+          .select('nominal');
+
+        // Apply same filters to summary query
+        if (filters.selectedMonth && filters.selectedMonth !== 'all') {
+          const [year, month] = filters.selectedMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+          summaryQuery = summaryQuery.gte('tanggal', startDate).lte('tanggal', endDate);
+        } else {
+          // If no month filter, use current month for summary
+          summaryQuery = summaryQuery.gte('tanggal', monthRange.start).lte('tanggal', monthRange.end);
+        }
+        if (searchQuery.trim()) {
+          summaryQuery = summaryQuery.or(`keterangan.ilike.%${searchQuery}%`);
+        }
+
         const [paginatedResult, summaryResult] = await Promise.all([
           query,
-          supabase
-            .from('expenses')
-            .select('nominal')
-            .gte('tanggal', monthRange.start)
-            .lte('tanggal', monthRange.end)
+          summaryQuery
         ]);
 
         if (paginatedResult.error) throw paginatedResult.error;
@@ -709,27 +725,54 @@ export const FinancialDashboard = ({ initialTable = "worker_income" }: Financial
               )}
             </div>
 
-            {/* Hide total card for:
-                - worker_income in public mode unless both month and worker filters are selected
-                - admin_income when user role is 'admin' (show if filter/search active)
-                - worker_income when user role is 'admin' (show if filter/search active)
+            {/* Card visibility logic:
+                - super_admin / admin_keuangan: Always show
+                - admin: Show only when hasActiveFilters is true
+                - public / unauthenticated: Show only when hasActiveFilters is true
+                - workers table: Always show for those who can access
             */}
-            {!(activeTable === "worker_income" && !isAdmin && !(filters.selectedMonth !== "all" && filters.selectedWorker !== "all")) && 
-             !(activeTable === "admin_income" && userRole === 'admin' && !hasActiveFilters && !searchQuery) && 
-             !(activeTable === "worker_income" && userRole === 'admin' && !hasActiveFilters && !searchQuery) && (
-              <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
-                <h3 className="text-2xl font-bold mb-3 text-header">
-                  Total {tableLabels[activeTable]} {
-                    hasActiveFilters 
-                      ? "(Hasil Filter)" 
-                      : activeTable !== "workers" ? "(Bulan Ini)" : ""
-                  }
-                </h3>
-                <p className="text-4xl font-bold text-header">
-                  {getSummaryDisplay()}
-                </p>
-              </Card>
-            )}
+            {(() => {
+              const isHighRole = userRole === 'super_admin' || userRole === 'admin_keuangan';
+              const isLowerRole = userRole === 'admin' || userRole === 'public' || !user;
+              
+              // For workers table, always show if user has access
+              if (activeTable === 'workers') {
+                return (
+                  <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
+                    <h3 className="text-2xl font-bold mb-3 text-header">
+                      Total {tableLabels[activeTable]}
+                    </h3>
+                    <p className="text-4xl font-bold text-header">
+                      {getSummaryDisplay()}
+                    </p>
+                  </Card>
+                );
+              }
+              
+              // For income/expense tables
+              // High roles: always show
+              // Lower roles: show only when filters or search are active
+              const shouldShowCard = isHighRole || (isLowerRole && hasActiveFilters);
+              
+              if (shouldShowCard) {
+                return (
+                  <Card className="p-6 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-elegant">
+                    <h3 className="text-2xl font-bold mb-3 text-header">
+                      Total {tableLabels[activeTable]} {
+                        hasActiveFilters 
+                          ? "(Hasil Filter)" 
+                          : "(Bulan Ini)"
+                      }
+                    </h3>
+                    <p className="text-4xl font-bold text-header">
+                      {getSummaryDisplay()}
+                    </p>
+                  </Card>
+                );
+              }
+              
+              return null;
+            })()}
 
             <DataTable
               data={currentData}
