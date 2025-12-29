@@ -42,6 +42,7 @@ const WorkerDone = () => {
   const [availableMonths, setAvailableMonths] = useState<MonthOption[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [salarySort, setSalarySort] = useState<'default' | 'highest' | 'lowest'>('default');
   
   const itemsPerPage = 10;
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -347,10 +348,23 @@ const WorkerDone = () => {
     }
   };
 
-  // Filter workers by search query
-  const filteredWorkers = workers.filter(w => 
-    w.worker_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter workers by search query and sort by salary if selected
+  const filteredWorkers = workers
+    .filter(w => w.worker_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      // If salary sort is active, prioritize it
+      if (salarySort === 'highest') {
+        return Number(b.total_income) - Number(a.total_income);
+      }
+      if (salarySort === 'lowest') {
+        return Number(a.total_income) - Number(b.total_income);
+      }
+      // Default: sort by status (proses first), then alphabetically
+      if (a.status !== b.status) {
+        return a.status === 'proses' ? -1 : 1;
+      }
+      return a.worker_name.localeCompare(b.worker_name);
+    });
 
   // Pagination
   const totalPages = Math.ceil(filteredWorkers.length / itemsPerPage);
@@ -465,6 +479,25 @@ const WorkerDone = () => {
                       }}
                       className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
                     />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-sm font-medium mb-2 block">Urutan Gaji</label>
+                    <Select
+                      value={salarySort}
+                      onValueChange={(value: 'default' | 'highest' | 'lowest') => {
+                        setSalarySort(value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Urutan default" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="default">Default (Status)</SelectItem>
+                        <SelectItem value="highest">Gaji Terbesar</SelectItem>
+                        <SelectItem value="lowest">Gaji Terkecil</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
