@@ -352,14 +352,25 @@ const WorkerDone = () => {
   const filteredWorkers = workers
     .filter(w => w.worker_name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
-      // If salary sort is active, prioritize it
+      // PRIORITAS 1: Worker yang sudah "Dibayar" (done) selalu di bawah
+      const aIsPaid = a.status === 'done';
+      const bIsPaid = b.status === 'done';
+      if (aIsPaid && !bIsPaid) {
+        return 1;
+      }
+      if (!aIsPaid && bIsPaid) {
+        return -1;
+      }
+
+      // PRIORITAS 2: Jika status pembayaran sama, terapkan filter gaji
       if (salarySort === 'highest') {
         return Number(b.total_income) - Number(a.total_income);
       }
       if (salarySort === 'lowest') {
         return Number(a.total_income) - Number(b.total_income);
       }
-      // Default: sort by status (proses first), then alphabetically
+
+      // PRIORITAS 3: Default - sort by status (proses first), then alphabetically
       if (a.status !== b.status) {
         return a.status === 'proses' ? -1 : 1;
       }
