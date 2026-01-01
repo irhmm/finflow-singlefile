@@ -397,53 +397,32 @@ export default function LaporanKeuangan() {
                         <ChartTooltip
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
-                              const workerIncome = payload.find(p => p.dataKey === 'workerIncome')?.value as number || 0;
-                              const adminIncome = payload.find(p => p.dataKey === 'adminIncome')?.value as number || 0;
-                              const expenses = payload.find(p => p.dataKey === 'expenses')?.value as number || 0;
-                              const omset = payload.find(p => p.dataKey === 'omset')?.value as number || 0;
-                              
-                              const monthNames: { [key: string]: string } = {
-                                'Jan': 'Januari', 'Feb': 'Februari', 'Mar': 'Maret',
-                                'Apr': 'April', 'Mei': 'Mei', 'Jun': 'Juni',
-                                'Jul': 'Juli', 'Agu': 'Agustus', 'Sep': 'September',
-                                'Okt': 'Oktober', 'Nov': 'November', 'Des': 'Desember'
-                              };
-                              const fullMonth = monthNames[label] || label;
-                              
                               return (
-                                <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-4 rounded-lg shadow-lg border border-gray-200/50 dark:border-gray-700/50 min-w-[220px]">
-                                  <p className="font-bold text-gray-900 dark:text-gray-100 mb-3 text-base">
-                                    {fullMonth} {selectedYear}
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                                  <p className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                    {label} {selectedYear}
                                   </p>
-                                  <div className="space-y-2.5">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-3 h-3 rounded-full bg-emerald-500 shrink-0" />
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">Pendapatan Worker:</span>
-                                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 ml-auto">
-                                        {formatCurrency(workerIncome)}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-3 h-3 rounded-full bg-blue-500 shrink-0" />
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">Pendapatan Admin:</span>
-                                      <span className="font-semibold text-blue-600 dark:text-blue-400 ml-auto">
-                                        {formatCurrency(adminIncome)}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">Pengeluaran:</span>
-                                      <span className="font-semibold text-red-600 dark:text-red-400 ml-auto">
-                                        {formatCurrency(expenses)}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-3 h-3 rounded-full bg-purple-500 shrink-0" />
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">Omset:</span>
-                                      <span className="font-semibold text-purple-600 dark:text-purple-400 ml-auto">
-                                        {formatCurrency(omset)}
-                                      </span>
-                                    </div>
+                                  <div className="space-y-1">
+                                    {payload.map((entry, index) => (
+                                      <div key={index} className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="w-3 h-3 rounded-full"
+                                            style={{ backgroundColor: entry.color }}
+                                          />
+                                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                                            {entry.name}:
+                                          </span>
+                                        </div>
+                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                          {new Intl.NumberFormat("id-ID", {
+                                            style: "currency",
+                                            currency: "IDR",
+                                            minimumFractionDigits: 0
+                                          }).format(entry.value as number)}
+                                        </span>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
                               );
