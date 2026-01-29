@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter } from "lucide-react";
+import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter, Edit, Trash2 } from "lucide-react";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -74,6 +75,18 @@ export default function RekapGajiWorker() {
   // Balance validation state for form
   const [selectedWorkerBalance, setSelectedWorkerBalance] = useState<number | null>(null);
   const [isCalculatingBalance, setIsCalculatingBalance] = useState(false);
+
+  // Edit state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingWithdrawal, setEditingWithdrawal] = useState<SalaryWithdrawal | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    amount: "",
+    catatan: ""
+  });
+
+  // Delete state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deletingWithdrawal, setDeletingWithdrawal] = useState<SalaryWithdrawal | null>(null);
 
   // Helper function to normalize worker names
   const normalizeWorkerName = (name: string): string => {
@@ -342,6 +355,84 @@ export default function RekapGajiWorker() {
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd MMM yyyy", { locale: id });
+  };
+
+  // Handle Edit
+  const handleEditClick = (withdrawal: SalaryWithdrawal) => {
+    setEditingWithdrawal(withdrawal);
+    setEditFormData({
+      amount: String(withdrawal.amount),
+      catatan: withdrawal.catatan || ""
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWithdrawal) return;
+
+    const newAmount = Number(editFormData.amount);
+    
+    if (newAmount <= 0) {
+      toast.error("Jumlah pengambilan harus lebih dari 0");
+      return;
+    }
+
+    // Calculate available balance (current remaining + original withdrawal amount)
+    const availableBalance = summary.remainingBalance + editingWithdrawal.amount;
+    
+    if (newAmount > availableBalance) {
+      toast.error(`Pengambilan melebihi sisa gaji! Maksimal: ${formatCurrency(availableBalance)}`, { duration: 5000 });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("salary_withdrawals")
+        .update({
+          amount: newAmount,
+          catatan: editFormData.catatan || null
+        })
+        .eq("id", editingWithdrawal.id);
+
+      if (error) throw error;
+
+      toast.success("Pengambilan gaji berhasil diupdate!");
+      setIsEditDialogOpen(false);
+      setEditingWithdrawal(null);
+      setEditFormData({ amount: "", catatan: "" });
+      fetchData();
+    } catch (error) {
+      console.error("Error updating withdrawal:", error);
+      toast.error("Gagal mengupdate pengambilan gaji");
+    }
+  };
+
+  // Handle Delete
+  const handleDeleteClick = (withdrawal: SalaryWithdrawal) => {
+    setDeletingWithdrawal(withdrawal);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingWithdrawal) return;
+
+    try {
+      const { error } = await supabase
+        .from("salary_withdrawals")
+        .delete()
+        .eq("id", deletingWithdrawal.id);
+
+      if (error) throw error;
+
+      toast.success("Pengambilan gaji berhasil dihapus!");
+      setIsDeleteDialogOpen(false);
+      setDeletingWithdrawal(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting withdrawal:", error);
+      toast.error("Gagal menghapus pengambilan gaji");
+    }
   };
 
   if (loading) {
@@ -758,6 +849,7 @@ export default function RekapGajiWorker() {
                             <TableHead className="font-semibold">Tanggal</TableHead>
                             <TableHead className="font-semibold text-right">Jumlah</TableHead>
                             <TableHead className="font-semibold">Catatan</TableHead>
+                            {canWrite && <TableHead className="font-semibold text-center">Aksi</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -768,6 +860,28 @@ export default function RekapGajiWorker() {
                                 {formatCurrency(withdrawal.amount)}
                               </TableCell>
                               <TableCell className="text-sm">{withdrawal.catatan || "-"}</TableCell>
+                              {canWrite && (
+                                <TableCell className="text-center">
+                                  <div className="flex gap-1 justify-center">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => handleEditClick(withdrawal)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => handleDeleteClick(withdrawal)}
+                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))}
                         </TableBody>
@@ -803,6 +917,86 @@ export default function RekapGajiWorker() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+              setIsEditDialogOpen(open);
+              if (!open) {
+                setEditingWithdrawal(null);
+                setEditFormData({ amount: "", catatan: "" });
+              }
+            }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Pengambilan Gaji</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Worker</Label>
+                    <Input value={editingWithdrawal?.worker || ""} disabled className="bg-muted" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Saldo Tersedia</Label>
+                    <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                      <span className="text-sm font-medium text-green-700">
+                        {formatCurrency(summary.remainingBalance + (editingWithdrawal?.amount || 0))}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="editAmount">Jumlah</Label>
+                    <Input
+                      id="editAmount"
+                      type="number"
+                      placeholder="Masukkan jumlah..."
+                      value={editFormData.amount}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, amount: e.target.value }))}
+                    />
+                    {editFormData.amount && editingWithdrawal && 
+                      Number(editFormData.amount) > (summary.remainingBalance + editingWithdrawal.amount) && (
+                      <p className="text-xs text-destructive">
+                        ⚠️ Jumlah melebihi saldo tersedia
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="editCatatan">Catatan (opsional)</Label>
+                    <Textarea
+                      id="editCatatan"
+                      placeholder="Masukkan catatan..."
+                      value={editFormData.catatan}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, catatan: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={
+                      !editFormData.amount || 
+                      Number(editFormData.amount) <= 0 ||
+                      (editingWithdrawal && Number(editFormData.amount) > (summary.remainingBalance + editingWithdrawal.amount))
+                    }
+                  >
+                    Simpan Perubahan
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirm Modal */}
+            <DeleteConfirmModal
+              isOpen={isDeleteDialogOpen}
+              onClose={() => {
+                setIsDeleteDialogOpen(false);
+                setDeletingWithdrawal(null);
+              }}
+              onConfirm={handleDeleteConfirm}
+              recordType="pengambilan gaji"
+            />
           </div>
         </main>
       </div>
