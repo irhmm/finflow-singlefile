@@ -593,7 +593,7 @@ export default function RekapGajiWorker() {
                                   key={month}
                                   value={month}
                                   onSelect={(currentValue) => {
-                                    setSelectedMonth(currentValue === selectedMonth ? "" : currentValue);
+                                    handleMonthChange(currentValue === selectedMonth ? "" : currentValue);
                                     setMonthComboboxOpen(false);
                                   }}
                                 >
