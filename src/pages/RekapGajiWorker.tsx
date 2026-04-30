@@ -531,7 +531,10 @@ export default function RekapGajiWorker() {
       setEditFormData({ amount: "", catatan: "" });
       setIncomePage(1);
       setWithdrawalPage(1);
-      await Promise.all([fetchData(), fetchAvailableMonths()]);
+      await Promise.all([
+        fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 }),
+        fetchAvailableMonths()
+      ]);
     } catch (error) {
       console.error("Error updating withdrawal:", error);
       toast.error("Gagal mengupdate pengambilan gaji");
