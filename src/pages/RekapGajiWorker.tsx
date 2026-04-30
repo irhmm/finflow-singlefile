@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,25 +98,65 @@ export default function RekapGajiWorker() {
       .join(' ');
   };
 
+  // Request-id guard untuk cegah race condition
+  const fetchIdRef = useRef(0);
+
   useEffect(() => {
     fetchWorkers();
     fetchAvailableMonths();
   }, []);
 
+  // Single useEffect: fetch saat filter ATAU pagination berubah
   useEffect(() => {
     if (selectedWorker || selectedMonth) {
-      setIncomePage(1);
-      setWithdrawalPage(1);
       fetchData();
     }
-  }, [selectedWorker, selectedMonth]);
+  }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 
-  // Refetch when pagination changes
+  // Realtime subscription - auto refresh saat data berubah dari mana saja
   useEffect(() => {
-    if (selectedWorker || selectedMonth) {
-      fetchData();
-    }
-  }, [incomePage, withdrawalPage]);
+    const channel = supabase
+      .channel('rekap-gaji-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'salary_withdrawals' },
+        () => {
+          if (selectedWorker || selectedMonth) {
+            fetchData();
+            fetchAvailableMonths();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'worker_income' },
+        () => {
+          if (selectedWorker || selectedMonth) {
+            fetchData();
+            fetchAvailableMonths();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
+
+  // Handlers untuk filter — reset pagination dalam satu render batch
+  const handleWorkerChange = (worker: string) => {
+    setIncomePage(1);
+    setWithdrawalPage(1);
+    setSelectedWorker(worker);
+  };
+
+  const handleMonthChange = (month: string) => {
+    setIncomePage(1);
+    setWithdrawalPage(1);
+    setSelectedMonth(month);
+  };
 
   const fetchWorkers = async () => {
     try {
@@ -177,6 +217,7 @@ export default function RekapGajiWorker() {
       return;
     }
 
+    const myFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     try {
       const startDate = selectedMonth ? `${selectedMonth}-01` : undefined;
@@ -187,11 +228,8 @@ export default function RekapGajiWorker() {
       const incomeStart = (incomePage - 1) * itemsPerPage;
       const withdrawalStart = (withdrawalPage - 1) * itemsPerPage;
 
-      // Build queries with server-side pagination
       let incomeQuery = supabase.from("worker_income").select("*", { count: 'exact' });
       let withdrawalQuery = supabase.from("salary_withdrawals").select("*", { count: 'exact' });
-      
-      // Separate queries for summary (need all data for totals)
       let incomeSummaryQuery = supabase.from("worker_income").select("fee, worker");
       let withdrawalSummaryQuery = supabase.from("salary_withdrawals").select("amount, worker");
 
@@ -210,13 +248,15 @@ export default function RekapGajiWorker() {
         withdrawalSummaryQuery = withdrawalSummaryQuery.ilike("worker", normalizedWorker);
       }
 
-      // Fetch paginated data and summary in parallel
       const [incomeRes, withdrawalRes, incomeSummaryRes, withdrawalSummaryRes] = await Promise.all([
         incomeQuery.order("tanggal", { ascending: false }).range(incomeStart, incomeStart + itemsPerPage - 1),
         withdrawalQuery.order("tanggal", { ascending: false }).range(withdrawalStart, withdrawalStart + itemsPerPage - 1),
         incomeSummaryQuery,
         withdrawalSummaryQuery
       ]);
+
+      // Abaikan response basi
+      if (myFetchId !== fetchIdRef.current) return;
 
       if (incomeRes.error) throw new Error(`Gagal mengambil data pendapatan: ${incomeRes.error.message}`);
       if (withdrawalRes.error) throw new Error(`Gagal mengambil data pengambilan gaji: ${withdrawalRes.error.message}`);
@@ -236,7 +276,6 @@ export default function RekapGajiWorker() {
       setIncomeTotalCount(incomeRes.count || 0);
       setWithdrawalTotalCount(withdrawalRes.count || 0);
 
-      // Calculate totals from summary queries
       const totalIncome = (incomeSummaryRes.data || []).reduce((sum, item) => {
         const fee = Number(item.fee);
         return sum + (isNaN(fee) ? 0 : fee);
@@ -251,10 +290,13 @@ export default function RekapGajiWorker() {
 
       setSummary({ totalIncome, totalWithdrawals, remainingBalance });
     } catch (error: any) {
+      if (myFetchId !== fetchIdRef.current) return;
       console.error("Error fetching data:", error);
       toast.error(error?.message || "Gagal mengambil data");
     } finally {
-      setIsLoading(false);
+      if (myFetchId === fetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -338,7 +380,10 @@ export default function RekapGajiWorker() {
       setIsDialogOpen(false);
       setFormData({ worker: "", amount: "", catatan: "" });
       setSelectedWorkerBalance(null);
-      fetchData();
+      // Reset ke page 1 agar data baru terlihat (data baru selalu di urutan teratas)
+      setIncomePage(1);
+      setWithdrawalPage(1);
+      await Promise.all([fetchData(), fetchAvailableMonths(), fetchWorkers()]);
     } catch (error) {
       console.error("Error adding salary withdrawal:", error);
       toast.error("Gagal menambahkan pengambilan gaji");
@@ -401,7 +446,9 @@ export default function RekapGajiWorker() {
       setIsEditDialogOpen(false);
       setEditingWithdrawal(null);
       setEditFormData({ amount: "", catatan: "" });
-      fetchData();
+      setIncomePage(1);
+      setWithdrawalPage(1);
+      await Promise.all([fetchData(), fetchAvailableMonths()]);
     } catch (error) {
       console.error("Error updating withdrawal:", error);
       toast.error("Gagal mengupdate pengambilan gaji");
@@ -428,7 +475,9 @@ export default function RekapGajiWorker() {
       toast.success("Pengambilan gaji berhasil dihapus!");
       setIsDeleteDialogOpen(false);
       setDeletingWithdrawal(null);
-      fetchData();
+      setIncomePage(1);
+      setWithdrawalPage(1);
+      await Promise.all([fetchData(), fetchAvailableMonths()]);
     } catch (error) {
       console.error("Error deleting withdrawal:", error);
       toast.error("Gagal menghapus pengambilan gaji");
@@ -491,7 +540,7 @@ export default function RekapGajiWorker() {
                               <CommandItem
                                 value=""
                                 onSelect={() => {
-                                  setSelectedWorker("");
+                                  handleWorkerChange("");
                                   setWorkerComboboxOpen(false);
                                 }}
                               >
@@ -503,7 +552,7 @@ export default function RekapGajiWorker() {
                                   key={worker}
                                   value={worker}
                                   onSelect={(currentValue) => {
-                                    setSelectedWorker(currentValue === selectedWorker ? "" : currentValue);
+                                    handleWorkerChange(currentValue === selectedWorker ? "" : currentValue);
                                     setWorkerComboboxOpen(false);
                                   }}
                                 >
@@ -544,7 +593,7 @@ export default function RekapGajiWorker() {
                                   key={month}
                                   value={month}
                                   onSelect={(currentValue) => {
-                                    setSelectedMonth(currentValue === selectedMonth ? "" : currentValue);
+                                    handleMonthChange(currentValue === selectedMonth ? "" : currentValue);
                                     setMonthComboboxOpen(false);
                                   }}
                                 >
