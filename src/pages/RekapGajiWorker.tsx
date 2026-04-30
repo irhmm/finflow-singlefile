@@ -409,31 +409,47 @@ export default function RekapGajiWorker() {
 
     try {
       const normalizedWorker = normalizeWorkerName(formData.worker);
-      
-      const startDate = `${selectedMonth}-01`;
-      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
-      
+
+      const { startDate, nextMonthStart } = getMonthRange(selectedMonth);
+      const tsStart = `${startDate}T00:00:00`;
+      const tsEnd = `${nextMonthStart}T00:00:00`;
+
       const [incomeRes, withdrawalRes] = await Promise.all([
-        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate),
-        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate)
+        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lt("tanggal", nextMonthStart),
+        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", tsStart).lt("tanggal", tsEnd)
       ]);
-      
+
       const totalIncome = incomeRes.data?.reduce((sum, item) => sum + Number(item.fee || 0), 0) || 0;
       const totalWithdrawals = withdrawalRes.data?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0;
       const remainingBalance = totalIncome - totalWithdrawals;
-      
+
       if (withdrawalAmount > remainingBalance) {
         toast.error(`Pengambilan melebihi sisa gaji! Sisa gaji ${normalizedWorker}: ${formatCurrency(remainingBalance)}`, { duration: 5000 });
         return;
       }
-      
+
+      // Tentukan tanggal eksplisit agar data terlihat pada bulan filter aktif,
+      // tidak bergantung pada timezone server VPS.
+      const now = new Date();
+      const currentMonthKey = format(now, "yyyy-MM");
+      let tanggalIso: string;
+      if (selectedMonth === currentMonthKey) {
+        tanggalIso = now.toISOString();
+      } else {
+        // Pakai hari ke-15 jam 12:00 lokal untuk menghindari edge timezone
+        const [yStr, mStr] = selectedMonth.split('-');
+        const safeDate = new Date(parseInt(yStr), parseInt(mStr) - 1, 15, 12, 0, 0);
+        tanggalIso = safeDate.toISOString();
+      }
+
       const { error } = await supabase
         .from("salary_withdrawals")
         .insert([
           {
             worker: normalizedWorker,
             amount: withdrawalAmount,
-            catatan: formData.catatan || null
+            catatan: formData.catatan || null,
+            tanggal: tanggalIso
           }
         ]);
 
@@ -446,7 +462,11 @@ export default function RekapGajiWorker() {
       // Reset ke page 1 agar data baru terlihat (data baru selalu di urutan teratas)
       setIncomePage(1);
       setWithdrawalPage(1);
-      await Promise.all([fetchData(), fetchAvailableMonths(), fetchWorkers()]);
+      await Promise.all([
+        fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 }),
+        fetchAvailableMonths(),
+        fetchWorkers()
+      ]);
     } catch (error) {
       console.error("Error adding salary withdrawal:", error);
       toast.error("Gagal menambahkan pengambilan gaji");
