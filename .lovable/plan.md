@@ -1,217 +1,108 @@
+## Masalah
 
+Di halaman Rekap Gaji Worker, kadang setelah menambah/mengubah pengambilan gaji, data masuk ke database tetapi tampilan tidak berubah. Penyebab yang teridentifikasi di `src/pages/RekapGajiWorker.tsx`:
 
-## Rencana: Tambah Fitur Edit dan Hapus di Rekap Gaji Worker
+1. **Page pagination tidak direset** setelah insert/edit/delete. Data baru muncul di page 1 (karena `order tanggal desc`), tapi user mungkin sedang di page 2/3 — sehingga UI seakan tidak berubah.
+2. **Race condition fetch ganda**: saat filter (worker/month) berubah, `setIncomePage(1)` & `setWithdrawalPage(1)` memicu satu `useEffect`, sementara perubahan filter sendiri memicu `useEffect` lain. Dua `fetchData()` jalan paralel — response yang datang belakangan menimpa yang benar.
+3. **Tidak ada request-id guard** di `fetchData` — response lama bisa menimpa response baru.
+4. **`fetchAvailableMonths` & `fetchWorkers` tidak dipanggil ulang** setelah insert, sehingga dropdown bulan/worker tidak terupdate jika ada bulan baru.
+5. **Tidak ada realtime subscription** — perubahan dari tab/device lain tidak ter-reflect.
 
-### Fitur yang Akan Ditambahkan
+## Perbaikan di `src/pages/RekapGajiWorker.tsx`
 
-Menambahkan tombol **Edit** dan **Hapus** pada tabel "Rincian Pengambilan Gaji" untuk data `salary_withdrawals`.
+### 1. Reset pagination ke page 1 sebelum refetch pada setiap mutasi
 
-### Perubahan pada File `src/pages/RekapGajiWorker.tsx`
-
-#### 1. Tambah State untuk Edit dan Delete
-
-```typescript
-// State untuk edit
-const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-const [editingWithdrawal, setEditingWithdrawal] = useState<SalaryWithdrawal | null>(null);
-const [editFormData, setEditFormData] = useState({
-  amount: "",
-  catatan: ""
-});
-
-// State untuk delete
-const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-const [deletingWithdrawal, setDeletingWithdrawal] = useState<SalaryWithdrawal | null>(null);
+Di akhir `handleSubmit`, `handleEditSubmit`, dan `handleDeleteConfirm`, sebelum panggil `fetchData()`:
+```ts
+setIncomePage(1);
+setWithdrawalPage(1);
+await fetchData(true); // force fetch dengan page 1
+fetchAvailableMonths(); // refresh daftar bulan
+fetchWorkers();         // refresh daftar worker
 ```
 
-#### 2. Tambah Import Icon
+### 2. Tambahkan request-id guard di `fetchData` untuk cegah race condition
 
-```typescript
-import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter, Edit, Trash2 } from "lucide-react";
-```
+```ts
+const fetchIdRef = useRef(0);
 
-#### 3. Tambah Fungsi Handle Edit
-
-```typescript
-const handleEditClick = (withdrawal: SalaryWithdrawal) => {
-  setEditingWithdrawal(withdrawal);
-  setEditFormData({
-    amount: String(withdrawal.amount),
-    catatan: withdrawal.catatan || ""
-  });
-  setIsEditDialogOpen(true);
-};
-
-const handleEditSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!editingWithdrawal) return;
-
-  const newAmount = Number(editFormData.amount);
-  
-  // Validasi: hitung sisa gaji (sebelum perubahan)
-  const normalizedWorker = normalizeWorkerName(editingWithdrawal.worker);
-  const startDate = `${selectedMonth}-01`;
-  const endDate = format(...);
-  
-  // Hitung saldo tersedia (termasuk withdrawal lama)
-  // remainingBalance + oldAmount = available untuk edit
-  const availableBalance = summary.remainingBalance + editingWithdrawal.amount;
-  
-  if (newAmount > availableBalance) {
-    toast.error(`Pengambilan melebihi sisa gaji!`);
-    return;
+const fetchData = async () => {
+  const myId = ++fetchIdRef.current;
+  setIsLoading(true);
+  try {
+    // ... query seperti biasa ...
+    if (myId !== fetchIdRef.current) return; // response basi, abaikan
+    setWorkerIncomes(...);
+    setSalaryWithdrawals(...);
+    setSummary(...);
+  } finally {
+    if (myId === fetchIdRef.current) setIsLoading(false);
   }
+};
+```
 
-  const { error } = await supabase
-    .from("salary_withdrawals")
-    .update({
-      amount: newAmount,
-      catatan: editFormData.catatan || null
-    })
-    .eq("id", editingWithdrawal.id);
+### 3. Gabungkan kedua `useEffect` agar tidak fetch ganda
 
-  if (error) { toast.error("Gagal mengupdate"); return; }
-  
-  toast.success("Pengambilan gaji berhasil diupdate!");
-  setIsEditDialogOpen(false);
-  setEditingWithdrawal(null);
+Hapus useEffect terpisah untuk pagination. Gunakan satu useEffect dengan dependency `[selectedWorker, selectedMonth, incomePage, withdrawalPage]`. Ketika filter berubah, reset page lewat handler dropdown (bukan via useEffect terpisah) sehingga state berubah dalam satu render batch.
+
+```ts
+const handleWorkerChange = (w: string) => {
+  setIncomePage(1);
+  setWithdrawalPage(1);
+  setSelectedWorker(w);
+};
+const handleMonthChange = (m: string) => {
+  setIncomePage(1);
+  setWithdrawalPage(1);
+  setSelectedMonth(m);
+};
+
+useEffect(() => {
   fetchData();
-};
+}, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 ```
 
-#### 4. Tambah Fungsi Handle Delete
+### 4. Tambahkan realtime subscription untuk `salary_withdrawals` dan `worker_income`
 
-```typescript
-const handleDeleteClick = (withdrawal: SalaryWithdrawal) => {
-  setDeletingWithdrawal(withdrawal);
-  setIsDeleteDialogOpen(true);
-};
-
-const handleDeleteConfirm = async () => {
-  if (!deletingWithdrawal) return;
-
-  const { error } = await supabase
-    .from("salary_withdrawals")
-    .delete()
-    .eq("id", deletingWithdrawal.id);
-
-  if (error) { toast.error("Gagal menghapus"); return; }
-
-  toast.success("Pengambilan gaji berhasil dihapus!");
-  setIsDeleteDialogOpen(false);
-  setDeletingWithdrawal(null);
-  fetchData();
-};
+```ts
+useEffect(() => {
+  const channel = supabase
+    .channel('rekap-gaji-realtime')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'salary_withdrawals' },
+      () => fetchData()
+    )
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'worker_income' },
+      () => fetchData()
+    )
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 ```
 
-#### 5. Update Tabel Pengambilan Gaji - Tambah Kolom Aksi
+### 5. Migrasi DB — aktifkan realtime untuk tabel terkait
 
-```typescript
-<TableHeader>
-  <TableRow className="bg-slate-50">
-    <TableHead className="font-semibold">Tanggal</TableHead>
-    <TableHead className="font-semibold text-right">Jumlah</TableHead>
-    <TableHead className="font-semibold">Catatan</TableHead>
-    {canWrite && <TableHead className="font-semibold text-center">Aksi</TableHead>}
-  </TableRow>
-</TableHeader>
-<TableBody>
-  {salaryWithdrawals.map((withdrawal) => (
-    <TableRow key={withdrawal.id}>
-      <TableCell>{formatDate(withdrawal.tanggal)}</TableCell>
-      <TableCell className="text-right font-medium">
-        {formatCurrency(withdrawal.amount)}
-      </TableCell>
-      <TableCell>{withdrawal.catatan || "-"}</TableCell>
-      {canWrite && (
-        <TableCell className="text-center">
-          <div className="flex gap-2 justify-center">
-            <Button variant="outline" size="sm" onClick={() => handleEditClick(withdrawal)}>
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleDeleteClick(withdrawal)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </TableCell>
-      )}
-    </TableRow>
-  ))}
-</TableBody>
+```sql
+ALTER TABLE public.salary_withdrawals REPLICA IDENTITY FULL;
+ALTER TABLE public.worker_income REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.salary_withdrawals;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.worker_income;
 ```
+(Akan dijalankan dengan `IF NOT EXISTS` guard via DO block agar aman jika sudah ada.)
 
-#### 6. Tambah Dialog Edit
+### 6. Toast yang lebih informatif
 
-```typescript
-<Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-  setIsEditDialogOpen(open);
-  if (!open) setEditingWithdrawal(null);
-}}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Edit Pengambilan Gaji</DialogTitle>
-    </DialogHeader>
-    <form onSubmit={handleEditSubmit} className="space-y-4">
-      {/* Worker (read-only) */}
-      <div className="space-y-2">
-        <Label>Worker</Label>
-        <Input value={editingWithdrawal?.worker || ""} disabled />
-      </div>
-      
-      {/* Amount */}
-      <div className="space-y-2">
-        <Label>Jumlah</Label>
-        <Input
-          type="number"
-          value={editFormData.amount}
-          onChange={(e) => setEditFormData(prev => ({ ...prev, amount: e.target.value }))}
-        />
-      </div>
-      
-      {/* Catatan */}
-      <div className="space-y-2">
-        <Label>Catatan</Label>
-        <Textarea
-          value={editFormData.catatan}
-          onChange={(e) => setEditFormData(prev => ({ ...prev, catatan: e.target.value }))}
-        />
-      </div>
-      
-      <Button type="submit" disabled={!editFormData.amount}>Simpan</Button>
-    </form>
-  </DialogContent>
-</Dialog>
-```
+Setelah insert berhasil, toast tetap ditampilkan, tapi sekarang user akan langsung melihat baris baru karena page sudah direset ke 1.
 
-#### 7. Gunakan DeleteConfirmModal
+## Ringkasan Hasil
 
-```typescript
-import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
+| Skenario | Sebelum | Sesudah |
+|---|---|---|
+| Tambah pengambilan saat di page 2 | UI tidak berubah | Auto pindah page 1, baris baru muncul |
+| Race condition fetch ganda | Data lama menimpa baru | Request-id guard mengabaikan response basi |
+| Pengambilan di bulan baru | Dropdown bulan tidak update | Auto refresh daftar bulan |
+| Perubahan dari tab lain | Tidak ter-reflect | Realtime subscription auto-refresh |
+| Edit/Hapus saat di page > 1 | UI mungkin tetap | Reset ke page 1 + refetch |
 
-// Di bagian return, tambahkan:
-<DeleteConfirmModal
-  isOpen={isDeleteDialogOpen}
-  onClose={() => {
-    setIsDeleteDialogOpen(false);
-    setDeletingWithdrawal(null);
-  }}
-  onConfirm={handleDeleteConfirm}
-  recordType="pengambilan gaji"
-/>
-```
-
-### Ringkasan Perubahan
-
-| Komponen | Perubahan |
-|----------|-----------|
-| State | Tambah state untuk edit dialog, delete dialog, editing record |
-| Import | Tambah icon `Edit`, `Trash2` dan `DeleteConfirmModal` |
-| Tabel Pengambilan | Tambah kolom "Aksi" dengan tombol Edit dan Delete |
-| Dialog Edit | Form untuk mengubah amount dan catatan |
-| Dialog Delete | Konfirmasi sebelum menghapus data |
-| Validasi | Edit amount tidak boleh melebihi sisa gaji yang tersedia |
-
-### Hak Akses
-- Tombol Edit dan Delete hanya muncul untuk role: `admin`, `admin_keuangan`, `super_admin`
-- RLS policies di database sudah mendukung UPDATE dan DELETE untuk role tersebut
-
+File yang diubah: `src/pages/RekapGajiWorker.tsx` + 1 migrasi SQL untuk realtime.
