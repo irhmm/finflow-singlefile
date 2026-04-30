@@ -101,6 +101,20 @@ export default function RekapGajiWorker() {
   // Request-id guard untuk cegah race condition
   const fetchIdRef = useRef(0);
 
+  // Helper: hitung rentang bulan aman untuk kolom date dan timestamptz
+  const getMonthRange = (month: string) => {
+    const [yStr, mStr] = month.split('-');
+    const y = parseInt(yStr);
+    const m = parseInt(mStr);
+    const startDate = `${month}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+    const nextY = m === 12 ? y + 1 : y;
+    const nextM = m === 12 ? 1 : m + 1;
+    const nextMonthStart = `${nextY}-${String(nextM).padStart(2, '0')}-01`;
+    return { startDate, endDate, nextMonthStart };
+  };
+
   useEffect(() => {
     fetchWorkers();
     fetchAvailableMonths();
@@ -111,9 +125,10 @@ export default function RekapGajiWorker() {
     if (selectedWorker || selectedMonth) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 
-  // Realtime subscription - auto refresh saat data berubah dari mana saja
+  // Realtime subscription - auto refresh saat data berubah dari mana saja (best effort)
   useEffect(() => {
     const channel = supabase
       .channel('rekap-gaji-realtime')
@@ -122,7 +137,9 @@ export default function RekapGajiWorker() {
         { event: '*', schema: 'public', table: 'salary_withdrawals' },
         () => {
           if (selectedWorker || selectedMonth) {
-            fetchData();
+            setIncomePage(1);
+            setWithdrawalPage(1);
+            fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 });
             fetchAvailableMonths();
           }
         }
@@ -132,7 +149,9 @@ export default function RekapGajiWorker() {
         { event: '*', schema: 'public', table: 'worker_income' },
         () => {
           if (selectedWorker || selectedMonth) {
-            fetchData();
+            setIncomePage(1);
+            setWithdrawalPage(1);
+            fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 });
             fetchAvailableMonths();
           }
         }
@@ -141,6 +160,34 @@ export default function RekapGajiWorker() {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorker, selectedMonth]);
+
+  // Fallback polling untuk VPS/self-hosted Supabase yang realtime-nya mungkin tidak aktif
+  useEffect(() => {
+    if (!selectedWorker && !selectedMonth) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 15000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+    const onFocus = () => fetchData();
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);

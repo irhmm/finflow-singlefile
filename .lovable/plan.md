@@ -1,108 +1,131 @@
-## Masalah
+## Analisa Masalah
 
-Di halaman Rekap Gaji Worker, kadang setelah menambah/mengubah pengambilan gaji, data masuk ke database tetapi tampilan tidak berubah. Penyebab yang teridentifikasi di `src/pages/RekapGajiWorker.tsx`:
+Saya sudah cek kode `src/pages/RekapGajiWorker.tsx`, network request, dan isi tabel Supabase. Penyebab utama yang paling kuat adalah filter tanggal untuk tabel `salary_withdrawals` yang bertipe `timestamp with time zone`.
 
-1. **Page pagination tidak direset** setelah insert/edit/delete. Data baru muncul di page 1 (karena `order tanggal desc`), tapi user mungkin sedang di page 2/3 — sehingga UI seakan tidak berubah.
-2. **Race condition fetch ganda**: saat filter (worker/month) berubah, `setIncomePage(1)` & `setWithdrawalPage(1)` memicu satu `useEffect`, sementara perubahan filter sendiri memicu `useEffect` lain. Dua `fetchData()` jalan paralel — response yang datang belakangan menimpa yang benar.
-3. **Tidak ada request-id guard** di `fetchData` — response lama bisa menimpa response baru.
-4. **`fetchAvailableMonths` & `fetchWorkers` tidak dipanggil ulang** setelah insert, sehingga dropdown bulan/worker tidak terupdate jika ada bulan baru.
-5. **Tidak ada realtime subscription** — perubahan dari tab/device lain tidak ter-reflect.
+Saat ini halaman memakai:
 
-## Perbaikan di `src/pages/RekapGajiWorker.tsx`
-
-### 1. Reset pagination ke page 1 sebelum refetch pada setiap mutasi
-
-Di akhir `handleSubmit`, `handleEditSubmit`, dan `handleDeleteConfirm`, sebelum panggil `fetchData()`:
 ```ts
-setIncomePage(1);
-setWithdrawalPage(1);
-await fetchData(true); // force fetch dengan page 1
-fetchAvailableMonths(); // refresh daftar bulan
-fetchWorkers();         // refresh daftar worker
+.gte("tanggal", "2026-04-01")
+.lte("tanggal", "2026-04-30")
 ```
 
-### 2. Tambahkan request-id guard di `fetchData` untuk cegah race condition
+Untuk kolom `timestamp with time zone`, batas akhir `2026-04-30` dibaca sebagai `2026-04-30 00:00:00`, sehingga data yang dibuat pada tanggal 30 setelah jam 00:00 tidak ikut terbaca. Ini membuat kasus “data masuk ke Supabase tapi tidak tampil di web”. Di network request terlihat query memang mengembalikan `[]` untuk April 2026, walaupun input baru bisa saja berada di tanggal akhir bulan atau bulan yang tidak sedang aktif.
+
+Selain itu, ada beberapa kelemahan lain untuk penggunaan di VPS/self-hosted:
+
+1. Realtime tidak bisa dijadikan satu-satunya andalan karena VPS/self-hosted Supabase kadang belum mengaktifkan publication/realtime websocket dengan benar.
+2. Setelah insert, kode memanggil `setWithdrawalPage(1)` lalu langsung `fetchData()`. Karena state React belum tentu sudah berubah saat fetch dijalankan, fetch bisa tetap memakai page/filter lama.
+3. Insert `salary_withdrawals` tidak mengirim `tanggal` eksplisit, sehingga tanggal mengikuti timezone/default database. Di VPS berbeda timezone, data bisa masuk ke bulan/hari berbeda dari yang sedang ditampilkan.
+4. Default bulan di Rekap Gaji Worker masih bulan saat ini, padahal memory project mengharuskan default ke bulan terbaru yang punya data.
+5. Query worker/month tanpa `.range()` bisa terkena limit default Supabase 1000 row pada data besar.
+
+## Rencana Perbaikan
+
+### 1. Perbaiki filter bulan untuk timestamp agar aman di semua timezone
+
+Tambahkan helper rentang bulan:
 
 ```ts
-const fetchIdRef = useRef(0);
-
-const fetchData = async () => {
-  const myId = ++fetchIdRef.current;
-  setIsLoading(true);
-  try {
-    // ... query seperti biasa ...
-    if (myId !== fetchIdRef.current) return; // response basi, abaikan
-    setWorkerIncomes(...);
-    setSalaryWithdrawals(...);
-    setSummary(...);
-  } finally {
-    if (myId === fetchIdRef.current) setIsLoading(false);
-  }
-};
+const getMonthRange = (month: string) => ({
+  startDate: `${month}-01`,
+  nextMonthStart: ...
+});
 ```
 
-### 3. Gabungkan kedua `useEffect` agar tidak fetch ganda
-
-Hapus useEffect terpisah untuk pagination. Gunakan satu useEffect dengan dependency `[selectedWorker, selectedMonth, incomePage, withdrawalPage]`. Ketika filter berubah, reset page lewat handler dropdown (bukan via useEffect terpisah) sehingga state berubah dalam satu render batch.
+Untuk `worker_income` yang bertipe `date`:
 
 ```ts
-const handleWorkerChange = (w: string) => {
+.gte("tanggal", startDate)
+.lt("tanggal", nextMonthStart)
+```
+
+Untuk `salary_withdrawals` yang bertipe `timestamp with time zone`:
+
+```ts
+.gte("tanggal", `${startDate}T00:00:00+07:00`)
+.lt("tanggal", `${nextMonthStart}T00:00:00+07:00`)
+```
+
+Ini memastikan seluruh tanggal dalam bulan terpilih ikut tampil, termasuk hari terakhir sampai jam 23:59:59.
+
+### 2. Saat menambah pengambilan, simpan tanggal eksplisit sesuai bulan yang sedang dipilih
+
+Ubah insert agar menyertakan `tanggal` eksplisit:
+
+```ts
+tanggal: new Date().toISOString() // jika bulan aktif adalah bulan sekarang
+```
+
+Jika user sedang melihat bulan lain, tanggal akan dibuat di bulan tersebut agar data langsung terlihat pada filter yang sedang dipakai:
+
+```ts
+tanggal: `${selectedMonth}-${hariAman}T...+07:00`
+```
+
+Dengan begitu data tidak “hilang” karena masuk ke bulan database/server yang berbeda.
+
+### 3. Buat fungsi refresh yang tidak bergantung pada state React yang belum update
+
+Tambahkan fungsi seperti:
+
+```ts
+const refreshAfterMutation = async (workerOverride?, monthOverride?) => {
+  fetchIdRef.current += 1;
   setIncomePage(1);
   setWithdrawalPage(1);
-  setSelectedWorker(w);
+  await fetchData({ incomePage: 1, withdrawalPage: 1, worker: workerOverride, month: monthOverride });
+  await Promise.all([fetchAvailableMonths(), fetchWorkers()]);
 };
-const handleMonthChange = (m: string) => {
-  setIncomePage(1);
-  setWithdrawalPage(1);
-  setSelectedMonth(m);
-};
-
-useEffect(() => {
-  fetchData();
-}, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 ```
 
-### 4. Tambahkan realtime subscription untuk `salary_withdrawals` dan `worker_income`
+Lalu gunakan di:
 
-```ts
-useEffect(() => {
-  const channel = supabase
-    .channel('rekap-gaji-realtime')
-    .on('postgres_changes',
-      { event: '*', schema: 'public', table: 'salary_withdrawals' },
-      () => fetchData()
-    )
-    .on('postgres_changes',
-      { event: '*', schema: 'public', table: 'worker_income' },
-      () => fetchData()
-    )
-    .subscribe();
-  return () => { supabase.removeChannel(channel); };
-}, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
-```
+- `handleSubmit`
+- `handleEditSubmit`
+- `handleDeleteConfirm`
+- callback realtime
 
-### 5. Migrasi DB — aktifkan realtime untuk tabel terkait
+Ini menghindari kondisi data masuk database tetapi tampilan tetap memakai page/filter lama.
 
-```sql
-ALTER TABLE public.salary_withdrawals REPLICA IDENTITY FULL;
-ALTER TABLE public.worker_income REPLICA IDENTITY FULL;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.salary_withdrawals;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.worker_income;
-```
-(Akan dijalankan dengan `IF NOT EXISTS` guard via DO block agar aman jika sudah ada.)
+### 4. Tambahkan fallback polling ringan untuk VPS/self-hosted
 
-### 6. Toast yang lebih informatif
+Realtime tetap dipertahankan, tetapi ditambah fallback agar halaman tetap sinkron walaupun realtime VPS tidak aktif:
 
-Setelah insert berhasil, toast tetap ditampilkan, tapi sekarang user akan langsung melihat baris baru karena page sudah direset ke 1.
+- Saat tab aktif dan halaman `/rekap-gaji-worker` terbuka, refetch otomatis setiap 10-15 detik.
+- Saat user kembali ke tab (`visibilitychange`) atau window fokus kembali, refetch ulang.
+- Tambahkan tombol manual `Refresh` kecil di header/filter untuk memaksa ambil data terbaru.
 
-## Ringkasan Hasil
+Ini membuat halaman tetap normal “di kondisi apapun”, termasuk jika Supabase realtime di VPS tidak berjalan.
 
-| Skenario | Sebelum | Sesudah |
-|---|---|---|
-| Tambah pengambilan saat di page 2 | UI tidak berubah | Auto pindah page 1, baris baru muncul |
-| Race condition fetch ganda | Data lama menimpa baru | Request-id guard mengabaikan response basi |
-| Pengambilan di bulan baru | Dropdown bulan tidak update | Auto refresh daftar bulan |
-| Perubahan dari tab lain | Tidak ter-reflect | Realtime subscription auto-refresh |
-| Edit/Hapus saat di page > 1 | UI mungkin tetap | Reset ke page 1 + refetch |
+### 5. Default bulan mengikuti bulan terbaru yang punya data
 
-File yang diubah: `src/pages/RekapGajiWorker.tsx` + 1 migrasi SQL untuk realtime.
+Update `fetchAvailableMonths()`:
+
+- Ambil data bulan dari `worker_income` dan `salary_withdrawals`.
+- Jika `selectedMonth` belum ada atau tidak ada di daftar bulan, otomatis pilih bulan paling terbaru yang tersedia.
+- Tetap sediakan bulan sekarang sebagai fallback jika belum ada data sama sekali.
+
+### 6. Perbaiki query worker/month agar aman untuk data besar
+
+Untuk daftar worker dan daftar bulan, gunakan query terpisah dengan `.range()` atau loop batch agar tidak berhenti di 1000 row default Supabase.
+
+### 7. Tambahkan error feedback yang lebih jelas
+
+Jika fetch gagal, tampilkan pesan error yang spesifik dan jangan biarkan tabel terlihat seperti kosong tanpa alasan. Ini membantu debugging di VPS jika ada masalah RLS, URL Supabase berbeda, atau realtime belum aktif.
+
+## File yang Akan Diubah
+
+- `src/pages/RekapGajiWorker.tsx`
+
+Tidak perlu migrasi database baru untuk fix utama ini. Perbaikan difokuskan ke frontend query dan strategi refresh, karena data sudah terbukti masuk ke Supabase tetapi query tampilan tidak mengambilnya dengan benar.
+
+## Hasil yang Diharapkan
+
+Setelah perbaikan:
+
+- Data pengambilan gaji yang baru diinput langsung muncul di tabel.
+- Data pada hari terakhir bulan tetap terbaca.
+- Data tetap muncul walaupun VPS/Supabase realtime tidak aktif.
+- Filter bulan otomatis mengikuti bulan yang benar.
+- Tampilan tetap sinkron setelah tambah, edit, hapus, pindah tab, atau refresh manual.
+- Lebih aman untuk VPS dengan timezone/server configuration berbeda.
