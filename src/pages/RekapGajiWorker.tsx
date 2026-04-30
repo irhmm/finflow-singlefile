@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter, Edit, Trash2 } from "lucide-react";
+import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter, Edit, Trash2, RefreshCw } from "lucide-react";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { toast } from "sonner";
 import { format } from "date-fns";
