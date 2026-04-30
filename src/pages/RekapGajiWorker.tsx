@@ -475,7 +475,9 @@ export default function RekapGajiWorker() {
       toast.success("Pengambilan gaji berhasil dihapus!");
       setIsDeleteDialogOpen(false);
       setDeletingWithdrawal(null);
-      fetchData();
+      setIncomePage(1);
+      setWithdrawalPage(1);
+      await Promise.all([fetchData(), fetchAvailableMonths()]);
     } catch (error) {
       console.error("Error deleting withdrawal:", error);
       toast.error("Gagal menghapus pengambilan gaji");
