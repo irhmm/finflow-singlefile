@@ -248,6 +248,13 @@ export default function RekapGajiWorker() {
       )).sort().reverse();
 
       setAvailableMonths(uniqueMonths);
+
+      // Auto-pilih bulan terbaru bila bulan aktif tidak ada datanya
+      if (uniqueMonths.length > 0 && !uniqueMonths.includes(selectedMonth)) {
+        setIncomePage(1);
+        setWithdrawalPage(1);
+        setSelectedMonth(uniqueMonths[0]);
+      }
     } catch (error) {
       console.error("Error fetching available months:", error);
       toast.error("Gagal mengambil data bulan tersedia");
