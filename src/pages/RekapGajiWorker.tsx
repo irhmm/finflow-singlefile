@@ -380,7 +380,10 @@ export default function RekapGajiWorker() {
       setIsDialogOpen(false);
       setFormData({ worker: "", amount: "", catatan: "" });
       setSelectedWorkerBalance(null);
-      fetchData();
+      // Reset ke page 1 agar data baru terlihat (data baru selalu di urutan teratas)
+      setIncomePage(1);
+      setWithdrawalPage(1);
+      await Promise.all([fetchData(), fetchAvailableMonths(), fetchWorkers()]);
     } catch (error) {
       console.error("Error adding salary withdrawal:", error);
       toast.error("Gagal menambahkan pengambilan gaji");
