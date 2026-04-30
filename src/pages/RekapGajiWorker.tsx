@@ -605,9 +605,27 @@ export default function RekapGajiWorker() {
             {/* Filter Data Card */}
             <Card className="shadow-lg border-0">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <Filter className="h-5 w-5" />
-                  Filter Data
+                <CardTitle className="flex items-center justify-between gap-2 text-base font-semibold">
+                  <span className="flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filter Data
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIncomePage(1);
+                      setWithdrawalPage(1);
+                      fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 });
+                      fetchAvailableMonths();
+                      fetchWorkers();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
+                    Refresh
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
