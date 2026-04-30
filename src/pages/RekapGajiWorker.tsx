@@ -98,25 +98,65 @@ export default function RekapGajiWorker() {
       .join(' ');
   };
 
+  // Request-id guard untuk cegah race condition
+  const fetchIdRef = useRef(0);
+
   useEffect(() => {
     fetchWorkers();
     fetchAvailableMonths();
   }, []);
 
+  // Single useEffect: fetch saat filter ATAU pagination berubah
   useEffect(() => {
     if (selectedWorker || selectedMonth) {
-      setIncomePage(1);
-      setWithdrawalPage(1);
       fetchData();
     }
-  }, [selectedWorker, selectedMonth]);
+  }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 
-  // Refetch when pagination changes
+  // Realtime subscription - auto refresh saat data berubah dari mana saja
   useEffect(() => {
-    if (selectedWorker || selectedMonth) {
-      fetchData();
-    }
-  }, [incomePage, withdrawalPage]);
+    const channel = supabase
+      .channel('rekap-gaji-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'salary_withdrawals' },
+        () => {
+          if (selectedWorker || selectedMonth) {
+            fetchData();
+            fetchAvailableMonths();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'worker_income' },
+        () => {
+          if (selectedWorker || selectedMonth) {
+            fetchData();
+            fetchAvailableMonths();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
+
+  // Handlers untuk filter — reset pagination dalam satu render batch
+  const handleWorkerChange = (worker: string) => {
+    setIncomePage(1);
+    setWithdrawalPage(1);
+    setSelectedWorker(worker);
+  };
+
+  const handleMonthChange = (month: string) => {
+    setIncomePage(1);
+    setWithdrawalPage(1);
+    setSelectedMonth(month);
+  };
 
   const fetchWorkers = async () => {
     try {
