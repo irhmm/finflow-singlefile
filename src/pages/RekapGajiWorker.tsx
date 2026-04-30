@@ -552,7 +552,7 @@ export default function RekapGajiWorker() {
                                   key={worker}
                                   value={worker}
                                   onSelect={(currentValue) => {
-                                    setSelectedWorker(currentValue === selectedWorker ? "" : currentValue);
+                                    handleWorkerChange(currentValue === selectedWorker ? "" : currentValue);
                                     setWorkerComboboxOpen(false);
                                   }}
                                 >
