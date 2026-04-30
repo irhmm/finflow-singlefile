@@ -563,7 +563,10 @@ export default function RekapGajiWorker() {
       setDeletingWithdrawal(null);
       setIncomePage(1);
       setWithdrawalPage(1);
-      await Promise.all([fetchData(), fetchAvailableMonths()]);
+      await Promise.all([
+        fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 }),
+        fetchAvailableMonths()
+      ]);
     } catch (error) {
       console.error("Error deleting withdrawal:", error);
       toast.error("Gagal menghapus pengambilan gaji");
