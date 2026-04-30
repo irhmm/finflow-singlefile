@@ -254,7 +254,7 @@ export default function RekapGajiWorker() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (opts?: { incomePageOverride?: number; withdrawalPageOverride?: number }) => {
     if (!selectedWorker && !selectedMonth) {
       setWorkerIncomes([]);
       setSalaryWithdrawals([]);
@@ -267,24 +267,39 @@ export default function RekapGajiWorker() {
     const myFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     try {
-      const startDate = selectedMonth ? `${selectedMonth}-01` : undefined;
-      const endDate = selectedMonth 
-        ? format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd") 
-        : undefined;
-      
-      const incomeStart = (incomePage - 1) * itemsPerPage;
-      const withdrawalStart = (withdrawalPage - 1) * itemsPerPage;
+      const effectiveIncomePage = opts?.incomePageOverride ?? incomePage;
+      const effectiveWithdrawalPage = opts?.withdrawalPageOverride ?? withdrawalPage;
+
+      let incomeStartDate: string | undefined;
+      let incomeNextMonth: string | undefined;
+      let withdrawalStartTs: string | undefined;
+      let withdrawalEndTs: string | undefined;
+
+      if (selectedMonth) {
+        const { startDate, nextMonthStart } = getMonthRange(selectedMonth);
+        incomeStartDate = startDate;
+        incomeNextMonth = nextMonthStart;
+        // timestamptz: pakai rentang [start, nextMonthStart) agar mencakup
+        // seluruh hari termasuk jam terakhir bulan, apapun timezone server.
+        withdrawalStartTs = `${startDate}T00:00:00`;
+        withdrawalEndTs = `${nextMonthStart}T00:00:00`;
+      }
+
+      const incomeStart = (effectiveIncomePage - 1) * itemsPerPage;
+      const withdrawalStart = (effectiveWithdrawalPage - 1) * itemsPerPage;
 
       let incomeQuery = supabase.from("worker_income").select("*", { count: 'exact' });
       let withdrawalQuery = supabase.from("salary_withdrawals").select("*", { count: 'exact' });
       let incomeSummaryQuery = supabase.from("worker_income").select("fee, worker");
       let withdrawalSummaryQuery = supabase.from("salary_withdrawals").select("amount, worker");
 
-      if (startDate && endDate) {
-        incomeQuery = incomeQuery.gte("tanggal", startDate).lte("tanggal", endDate);
-        withdrawalQuery = withdrawalQuery.gte("tanggal", startDate).lte("tanggal", endDate);
-        incomeSummaryQuery = incomeSummaryQuery.gte("tanggal", startDate).lte("tanggal", endDate);
-        withdrawalSummaryQuery = withdrawalSummaryQuery.gte("tanggal", startDate).lte("tanggal", endDate);
+      if (incomeStartDate && incomeNextMonth) {
+        incomeQuery = incomeQuery.gte("tanggal", incomeStartDate).lt("tanggal", incomeNextMonth);
+        incomeSummaryQuery = incomeSummaryQuery.gte("tanggal", incomeStartDate).lt("tanggal", incomeNextMonth);
+      }
+      if (withdrawalStartTs && withdrawalEndTs) {
+        withdrawalQuery = withdrawalQuery.gte("tanggal", withdrawalStartTs).lt("tanggal", withdrawalEndTs);
+        withdrawalSummaryQuery = withdrawalSummaryQuery.gte("tanggal", withdrawalStartTs).lt("tanggal", withdrawalEndTs);
       }
 
       if (selectedWorker) {
@@ -356,12 +371,13 @@ export default function RekapGajiWorker() {
     setIsCalculatingBalance(true);
     try {
       const normalizedWorker = normalizeWorkerName(workerName);
-      const startDate = `${selectedMonth}-01`;
-      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
-      
+      const { startDate, nextMonthStart } = getMonthRange(selectedMonth);
+      const tsStart = `${startDate}T00:00:00`;
+      const tsEnd = `${nextMonthStart}T00:00:00`;
+
       const [incomeRes, withdrawalRes] = await Promise.all([
-        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate),
-        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate)
+        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lt("tanggal", nextMonthStart),
+        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", tsStart).lt("tanggal", tsEnd)
       ]);
       
       const totalIncome = incomeRes.data?.reduce((sum, item) => sum + Number(item.fee || 0), 0) || 0;
