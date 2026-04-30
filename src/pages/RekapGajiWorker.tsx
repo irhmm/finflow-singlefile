@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter, Edit, Trash2 } from "lucide-react";
+import { Plus, Wallet, Check, ChevronsUpDown, TrendingUp, ClipboardList, Calculator, Filter, Edit, Trash2, RefreshCw } from "lucide-react";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -101,6 +101,20 @@ export default function RekapGajiWorker() {
   // Request-id guard untuk cegah race condition
   const fetchIdRef = useRef(0);
 
+  // Helper: hitung rentang bulan aman untuk kolom date dan timestamptz
+  const getMonthRange = (month: string) => {
+    const [yStr, mStr] = month.split('-');
+    const y = parseInt(yStr);
+    const m = parseInt(mStr);
+    const startDate = `${month}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+    const nextY = m === 12 ? y + 1 : y;
+    const nextM = m === 12 ? 1 : m + 1;
+    const nextMonthStart = `${nextY}-${String(nextM).padStart(2, '0')}-01`;
+    return { startDate, endDate, nextMonthStart };
+  };
+
   useEffect(() => {
     fetchWorkers();
     fetchAvailableMonths();
@@ -111,9 +125,10 @@ export default function RekapGajiWorker() {
     if (selectedWorker || selectedMonth) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
 
-  // Realtime subscription - auto refresh saat data berubah dari mana saja
+  // Realtime subscription - auto refresh saat data berubah dari mana saja (best effort)
   useEffect(() => {
     const channel = supabase
       .channel('rekap-gaji-realtime')
@@ -122,7 +137,9 @@ export default function RekapGajiWorker() {
         { event: '*', schema: 'public', table: 'salary_withdrawals' },
         () => {
           if (selectedWorker || selectedMonth) {
-            fetchData();
+            setIncomePage(1);
+            setWithdrawalPage(1);
+            fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 });
             fetchAvailableMonths();
           }
         }
@@ -132,7 +149,9 @@ export default function RekapGajiWorker() {
         { event: '*', schema: 'public', table: 'worker_income' },
         () => {
           if (selectedWorker || selectedMonth) {
-            fetchData();
+            setIncomePage(1);
+            setWithdrawalPage(1);
+            fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 });
             fetchAvailableMonths();
           }
         }
@@ -141,6 +160,34 @@ export default function RekapGajiWorker() {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorker, selectedMonth]);
+
+  // Fallback polling untuk VPS/self-hosted Supabase yang realtime-nya mungkin tidak aktif
+  useEffect(() => {
+    if (!selectedWorker && !selectedMonth) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 15000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+    const onFocus = () => fetchData();
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorker, selectedMonth, incomePage, withdrawalPage]);
@@ -201,13 +248,20 @@ export default function RekapGajiWorker() {
       )).sort().reverse();
 
       setAvailableMonths(uniqueMonths);
+
+      // Auto-pilih bulan terbaru bila bulan aktif tidak ada datanya
+      if (uniqueMonths.length > 0 && !uniqueMonths.includes(selectedMonth)) {
+        setIncomePage(1);
+        setWithdrawalPage(1);
+        setSelectedMonth(uniqueMonths[0]);
+      }
     } catch (error) {
       console.error("Error fetching available months:", error);
       toast.error("Gagal mengambil data bulan tersedia");
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (opts?: { incomePageOverride?: number; withdrawalPageOverride?: number }) => {
     if (!selectedWorker && !selectedMonth) {
       setWorkerIncomes([]);
       setSalaryWithdrawals([]);
@@ -220,24 +274,39 @@ export default function RekapGajiWorker() {
     const myFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     try {
-      const startDate = selectedMonth ? `${selectedMonth}-01` : undefined;
-      const endDate = selectedMonth 
-        ? format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd") 
-        : undefined;
-      
-      const incomeStart = (incomePage - 1) * itemsPerPage;
-      const withdrawalStart = (withdrawalPage - 1) * itemsPerPage;
+      const effectiveIncomePage = opts?.incomePageOverride ?? incomePage;
+      const effectiveWithdrawalPage = opts?.withdrawalPageOverride ?? withdrawalPage;
+
+      let incomeStartDate: string | undefined;
+      let incomeNextMonth: string | undefined;
+      let withdrawalStartTs: string | undefined;
+      let withdrawalEndTs: string | undefined;
+
+      if (selectedMonth) {
+        const { startDate, nextMonthStart } = getMonthRange(selectedMonth);
+        incomeStartDate = startDate;
+        incomeNextMonth = nextMonthStart;
+        // timestamptz: pakai rentang [start, nextMonthStart) agar mencakup
+        // seluruh hari termasuk jam terakhir bulan, apapun timezone server.
+        withdrawalStartTs = `${startDate}T00:00:00`;
+        withdrawalEndTs = `${nextMonthStart}T00:00:00`;
+      }
+
+      const incomeStart = (effectiveIncomePage - 1) * itemsPerPage;
+      const withdrawalStart = (effectiveWithdrawalPage - 1) * itemsPerPage;
 
       let incomeQuery = supabase.from("worker_income").select("*", { count: 'exact' });
       let withdrawalQuery = supabase.from("salary_withdrawals").select("*", { count: 'exact' });
       let incomeSummaryQuery = supabase.from("worker_income").select("fee, worker");
       let withdrawalSummaryQuery = supabase.from("salary_withdrawals").select("amount, worker");
 
-      if (startDate && endDate) {
-        incomeQuery = incomeQuery.gte("tanggal", startDate).lte("tanggal", endDate);
-        withdrawalQuery = withdrawalQuery.gte("tanggal", startDate).lte("tanggal", endDate);
-        incomeSummaryQuery = incomeSummaryQuery.gte("tanggal", startDate).lte("tanggal", endDate);
-        withdrawalSummaryQuery = withdrawalSummaryQuery.gte("tanggal", startDate).lte("tanggal", endDate);
+      if (incomeStartDate && incomeNextMonth) {
+        incomeQuery = incomeQuery.gte("tanggal", incomeStartDate).lt("tanggal", incomeNextMonth);
+        incomeSummaryQuery = incomeSummaryQuery.gte("tanggal", incomeStartDate).lt("tanggal", incomeNextMonth);
+      }
+      if (withdrawalStartTs && withdrawalEndTs) {
+        withdrawalQuery = withdrawalQuery.gte("tanggal", withdrawalStartTs).lt("tanggal", withdrawalEndTs);
+        withdrawalSummaryQuery = withdrawalSummaryQuery.gte("tanggal", withdrawalStartTs).lt("tanggal", withdrawalEndTs);
       }
 
       if (selectedWorker) {
@@ -309,12 +378,13 @@ export default function RekapGajiWorker() {
     setIsCalculatingBalance(true);
     try {
       const normalizedWorker = normalizeWorkerName(workerName);
-      const startDate = `${selectedMonth}-01`;
-      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
-      
+      const { startDate, nextMonthStart } = getMonthRange(selectedMonth);
+      const tsStart = `${startDate}T00:00:00`;
+      const tsEnd = `${nextMonthStart}T00:00:00`;
+
       const [incomeRes, withdrawalRes] = await Promise.all([
-        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate),
-        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate)
+        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lt("tanggal", nextMonthStart),
+        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", tsStart).lt("tanggal", tsEnd)
       ]);
       
       const totalIncome = incomeRes.data?.reduce((sum, item) => sum + Number(item.fee || 0), 0) || 0;
@@ -346,31 +416,47 @@ export default function RekapGajiWorker() {
 
     try {
       const normalizedWorker = normalizeWorkerName(formData.worker);
-      
-      const startDate = `${selectedMonth}-01`;
-      const endDate = format(new Date(parseInt(selectedMonth.split('-')[0]), parseInt(selectedMonth.split('-')[1]), 0), "yyyy-MM-dd");
-      
+
+      const { startDate, nextMonthStart } = getMonthRange(selectedMonth);
+      const tsStart = `${startDate}T00:00:00`;
+      const tsEnd = `${nextMonthStart}T00:00:00`;
+
       const [incomeRes, withdrawalRes] = await Promise.all([
-        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate),
-        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", startDate).lte("tanggal", endDate)
+        supabase.from("worker_income").select("fee").ilike("worker", normalizedWorker).gte("tanggal", startDate).lt("tanggal", nextMonthStart),
+        supabase.from("salary_withdrawals").select("amount").ilike("worker", normalizedWorker).gte("tanggal", tsStart).lt("tanggal", tsEnd)
       ]);
-      
+
       const totalIncome = incomeRes.data?.reduce((sum, item) => sum + Number(item.fee || 0), 0) || 0;
       const totalWithdrawals = withdrawalRes.data?.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 0;
       const remainingBalance = totalIncome - totalWithdrawals;
-      
+
       if (withdrawalAmount > remainingBalance) {
         toast.error(`Pengambilan melebihi sisa gaji! Sisa gaji ${normalizedWorker}: ${formatCurrency(remainingBalance)}`, { duration: 5000 });
         return;
       }
-      
+
+      // Tentukan tanggal eksplisit agar data terlihat pada bulan filter aktif,
+      // tidak bergantung pada timezone server VPS.
+      const now = new Date();
+      const currentMonthKey = format(now, "yyyy-MM");
+      let tanggalIso: string;
+      if (selectedMonth === currentMonthKey) {
+        tanggalIso = now.toISOString();
+      } else {
+        // Pakai hari ke-15 jam 12:00 lokal untuk menghindari edge timezone
+        const [yStr, mStr] = selectedMonth.split('-');
+        const safeDate = new Date(parseInt(yStr), parseInt(mStr) - 1, 15, 12, 0, 0);
+        tanggalIso = safeDate.toISOString();
+      }
+
       const { error } = await supabase
         .from("salary_withdrawals")
         .insert([
           {
             worker: normalizedWorker,
             amount: withdrawalAmount,
-            catatan: formData.catatan || null
+            catatan: formData.catatan || null,
+            tanggal: tanggalIso
           }
         ]);
 
@@ -383,7 +469,11 @@ export default function RekapGajiWorker() {
       // Reset ke page 1 agar data baru terlihat (data baru selalu di urutan teratas)
       setIncomePage(1);
       setWithdrawalPage(1);
-      await Promise.all([fetchData(), fetchAvailableMonths(), fetchWorkers()]);
+      await Promise.all([
+        fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 }),
+        fetchAvailableMonths(),
+        fetchWorkers()
+      ]);
     } catch (error) {
       console.error("Error adding salary withdrawal:", error);
       toast.error("Gagal menambahkan pengambilan gaji");
@@ -448,7 +538,10 @@ export default function RekapGajiWorker() {
       setEditFormData({ amount: "", catatan: "" });
       setIncomePage(1);
       setWithdrawalPage(1);
-      await Promise.all([fetchData(), fetchAvailableMonths()]);
+      await Promise.all([
+        fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 }),
+        fetchAvailableMonths()
+      ]);
     } catch (error) {
       console.error("Error updating withdrawal:", error);
       toast.error("Gagal mengupdate pengambilan gaji");
@@ -477,7 +570,10 @@ export default function RekapGajiWorker() {
       setDeletingWithdrawal(null);
       setIncomePage(1);
       setWithdrawalPage(1);
-      await Promise.all([fetchData(), fetchAvailableMonths()]);
+      await Promise.all([
+        fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 }),
+        fetchAvailableMonths()
+      ]);
     } catch (error) {
       console.error("Error deleting withdrawal:", error);
       toast.error("Gagal menghapus pengambilan gaji");
@@ -509,9 +605,27 @@ export default function RekapGajiWorker() {
             {/* Filter Data Card */}
             <Card className="shadow-lg border-0">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <Filter className="h-5 w-5" />
-                  Filter Data
+                <CardTitle className="flex items-center justify-between gap-2 text-base font-semibold">
+                  <span className="flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filter Data
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIncomePage(1);
+                      setWithdrawalPage(1);
+                      fetchData({ incomePageOverride: 1, withdrawalPageOverride: 1 });
+                      fetchAvailableMonths();
+                      fetchWorkers();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
+                    Refresh
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
