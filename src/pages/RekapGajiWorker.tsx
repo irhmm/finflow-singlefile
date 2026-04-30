@@ -217,6 +217,7 @@ export default function RekapGajiWorker() {
       return;
     }
 
+    const myFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     try {
       const startDate = selectedMonth ? `${selectedMonth}-01` : undefined;
@@ -227,11 +228,8 @@ export default function RekapGajiWorker() {
       const incomeStart = (incomePage - 1) * itemsPerPage;
       const withdrawalStart = (withdrawalPage - 1) * itemsPerPage;
 
-      // Build queries with server-side pagination
       let incomeQuery = supabase.from("worker_income").select("*", { count: 'exact' });
       let withdrawalQuery = supabase.from("salary_withdrawals").select("*", { count: 'exact' });
-      
-      // Separate queries for summary (need all data for totals)
       let incomeSummaryQuery = supabase.from("worker_income").select("fee, worker");
       let withdrawalSummaryQuery = supabase.from("salary_withdrawals").select("amount, worker");
 
@@ -250,13 +248,15 @@ export default function RekapGajiWorker() {
         withdrawalSummaryQuery = withdrawalSummaryQuery.ilike("worker", normalizedWorker);
       }
 
-      // Fetch paginated data and summary in parallel
       const [incomeRes, withdrawalRes, incomeSummaryRes, withdrawalSummaryRes] = await Promise.all([
         incomeQuery.order("tanggal", { ascending: false }).range(incomeStart, incomeStart + itemsPerPage - 1),
         withdrawalQuery.order("tanggal", { ascending: false }).range(withdrawalStart, withdrawalStart + itemsPerPage - 1),
         incomeSummaryQuery,
         withdrawalSummaryQuery
       ]);
+
+      // Abaikan response basi
+      if (myFetchId !== fetchIdRef.current) return;
 
       if (incomeRes.error) throw new Error(`Gagal mengambil data pendapatan: ${incomeRes.error.message}`);
       if (withdrawalRes.error) throw new Error(`Gagal mengambil data pengambilan gaji: ${withdrawalRes.error.message}`);
@@ -276,7 +276,6 @@ export default function RekapGajiWorker() {
       setIncomeTotalCount(incomeRes.count || 0);
       setWithdrawalTotalCount(withdrawalRes.count || 0);
 
-      // Calculate totals from summary queries
       const totalIncome = (incomeSummaryRes.data || []).reduce((sum, item) => {
         const fee = Number(item.fee);
         return sum + (isNaN(fee) ? 0 : fee);
@@ -291,10 +290,13 @@ export default function RekapGajiWorker() {
 
       setSummary({ totalIncome, totalWithdrawals, remainingBalance });
     } catch (error: any) {
+      if (myFetchId !== fetchIdRef.current) return;
       console.error("Error fetching data:", error);
       toast.error(error?.message || "Gagal mengambil data");
     } finally {
-      setIsLoading(false);
+      if (myFetchId === fetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
