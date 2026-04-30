@@ -540,7 +540,7 @@ export default function RekapGajiWorker() {
                               <CommandItem
                                 value=""
                                 onSelect={() => {
-                                  setSelectedWorker("");
+                                  handleWorkerChange("");
                                   setWorkerComboboxOpen(false);
                                 }}
                               >
